@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8002'
 
 interface WebSocketMessage<T = unknown> {
   type: string

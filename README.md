@@ -13,16 +13,29 @@
 
 ## 📸 스크린샷
 
-### 메인 대시보드
+### 🏠 메인 대시보드
+> 실시간 포트폴리오 현황, 에이전트 상태, 거래 내역을 한눈에 확인
+
 ![대시보드](docs/screenshots/dashboard.png)
 
-### 포트폴리오 현황
+### 💼 포트폴리오 현황
+> 총 자산 가치, 보유 포지션, 손익(PnL) 실시간 추적
+
 ![포트폴리오](docs/screenshots/portfolio.png)
 
-### 에이전트 모니터링
+### 🤖 에이전트 모니터링
+> 5개 AI 에이전트 상태 및 실시간 의사결정 로그 스트림
+
 ![에이전트](docs/screenshots/agents.png)
 
-### 설정 화면
+### 📋 거래 내역
+> 전체 자동매매 거래 기록, 전략별 성과 분석
+
+![거래내역](docs/screenshots/trades.png)
+
+### ⚙️ 설정 화면
+> 리스크 파라미터 및 매매 전략 커스터마이징
+
 ![설정](docs/screenshots/settings.png)
 
 ---

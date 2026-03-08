@@ -6,7 +6,7 @@ import type { Portfolio } from '@/types/portfolio'
 import type { Agent, AgentLog, RiskConfig, StrategyConfig, SystemSettings } from '@/types/agent'
 import type { Trade, TradeListResponse } from '@/types/trade'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
 
 class ApiError extends Error {
   constructor(

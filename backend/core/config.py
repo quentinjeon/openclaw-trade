@@ -67,20 +67,33 @@ class Settings(BaseSettings):
     @classmethod
     def parse_cors_origins(cls, v):
         if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
+            v = v.strip()
+            # JSON 배열 형식 처리: ["a","b"]
+            if v.startswith("["):
+                import json
+                return json.loads(v)
+            # 쉼표 구분 문자열 처리: a,b
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
     @field_validator("DEFAULT_SYMBOLS", mode="before")
     @classmethod
     def parse_symbols(cls, v):
         if isinstance(v, str):
-            return [s.strip() for s in v.split(",")]
+            v = v.strip()
+            # JSON 배열 형식 처리: ["a","b"]
+            if v.startswith("["):
+                import json
+                return json.loads(v)
+            # 쉼표 구분 문자열 처리: a,b
+            return [s.strip() for s in v.split(",") if s.strip()]
         return v
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
+        extra = "ignore"  # NEXT_PUBLIC_* 등 불필요한 환경변수 무시
 
 
 # 전역 설정 인스턴스
