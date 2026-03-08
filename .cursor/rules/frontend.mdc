@@ -1,0 +1,156 @@
+---
+description: OpenClaw 프론트엔드 개발 규칙 (Next.js 14 App Router)
+globs: ["frontend/**/*"]
+alwaysApply: false
+---
+
+# 프론트엔드 코드 규칙
+
+## 기술 스택
+- **프레임워크**: Next.js 14 (App Router)
+- **언어**: TypeScript (strict mode)
+- **스타일링**: Tailwind CSS + shadcn/ui
+- **차트**: Recharts + TradingView Lightweight Charts
+- **상태관리**: Zustand
+- **서버 상태**: SWR
+- **실시간**: WebSocket (native)
+- **아이콘**: Lucide React
+
+## 프로젝트 구조
+```
+frontend/
+├── agents.md                  # 프론트엔드 에이전트/컴포넌트 명세
+├── src/
+│   ├── app/                   # Next.js App Router
+│   │   ├── layout.tsx         # 루트 레이아웃
+│   │   ├── page.tsx           # 메인 대시보드
+│   │   ├── portfolio/
+│   │   ├── trades/
+│   │   ├── agents/
+│   │   ├── strategies/
+│   │   └── settings/
+│   ├── components/
+│   │   ├── ui/                # shadcn/ui 기반 공통 컴포넌트
+│   │   ├── dashboard/         # 대시보드 전용 컴포넌트
+│   │   ├── portfolio/         # 포트폴리오 컴포넌트
+│   │   ├── trading/           # 거래 관련 컴포넌트
+│   │   └── agents/            # 에이전트 모니터링 컴포넌트
+│   ├── hooks/
+│   │   ├── useWebSocket.ts    # WebSocket 훅
+│   │   ├── usePortfolio.ts    # 포트폴리오 데이터 훅
+│   │   └── useAgents.ts       # 에이전트 상태 훅
+│   ├── stores/
+│   │   ├── portfolioStore.ts  # Zustand 포트폴리오 스토어
+│   │   └── agentStore.ts      # Zustand 에이전트 스토어
+│   ├── services/
+│   │   └── api.ts             # API 클라이언트
+│   └── types/
+│       ├── trade.ts
+│       ├── agent.ts
+│       └── portfolio.ts
+└── package.json
+```
+
+## 컴포넌트 규칙
+
+### 파일 명명
+- 컴포넌트: `PascalCase.tsx`
+- 훅: `useCamelCase.ts`
+- 유틸: `camelCase.ts`
+- 타입: `camelCase.ts`
+
+### 컴포넌트 구조
+```tsx
+// 1. imports (외부 → 내부)
+import { FC } from 'react'
+import { Card } from '@/components/ui/card'
+import { usePortfolio } from '@/hooks/usePortfolio'
+import type { Portfolio } from '@/types/portfolio'
+
+// 2. 타입 정의
+interface PortfolioCardProps {
+  portfolio: Portfolio
+  className?: string
+}
+
+// 3. 컴포넌트 (named export)
+export const PortfolioCard: FC<PortfolioCardProps> = ({ portfolio, className }) => {
+  // 4. 훅
+  const { data } = usePortfolio()
+  
+  // 5. 핸들러
+  const handleRefresh = () => { ... }
+  
+  // 6. 렌더링
+  return (
+    <Card className={className}>
+      ...
+    </Card>
+  )
+}
+```
+
+### 금지 사항
+- `any` 타입 사용 금지 → `unknown` 또는 명시적 타입 사용
+- `useEffect` 남용 금지 → SWR/Zustand 우선 사용
+- 인라인 스타일 금지 → Tailwind CSS 클래스 사용
+- `default export` 지양 → named export 사용
+
+## 상태 관리 규칙
+
+### Zustand 스토어
+```typescript
+// stores/portfolioStore.ts
+interface PortfolioStore {
+  portfolio: Portfolio | null
+  isLoading: boolean
+  setPortfolio: (portfolio: Portfolio) => void
+}
+
+export const usePortfolioStore = create<PortfolioStore>((set) => ({
+  portfolio: null,
+  isLoading: false,
+  setPortfolio: (portfolio) => set({ portfolio }),
+}))
+```
+
+### SWR 사용
+```typescript
+// 서버 데이터 페칭은 SWR 사용
+const { data, error, mutate } = useSWR('/api/portfolio', fetcher, {
+  refreshInterval: 5000,  // 5초마다 갱신
+})
+```
+
+## WebSocket 규칙
+```typescript
+// hooks/useWebSocket.ts
+export function useWebSocket(channel: string) {
+  const [data, setData] = useState(null)
+  
+  useEffect(() => {
+    const ws = new WebSocket(`ws://localhost:8000/ws/${channel}`)
+    ws.onmessage = (event) => setData(JSON.parse(event.data))
+    return () => ws.close()  // cleanup 필수
+  }, [channel])
+  
+  return data
+}
+```
+
+## UI/UX 규칙
+- 다크 테마 기본 (암호화폐 트레이딩 앱 표준)
+- 가격 상승: 초록색 (`text-green-400`)
+- 가격 하락: 빨간색 (`text-red-400`)
+- 로딩 상태 항상 표시
+- 에러 상태 사용자 친화적으로 표시
+
+## API 통신 규칙
+```typescript
+// services/api.ts 를 통해서만 API 호출
+import { api } from '@/services/api'
+
+// 직접 fetch 호출 금지
+const portfolio = await api.getPortfolio()  // ✅
+const data = await fetch('/api/portfolio')  // ❌
+```

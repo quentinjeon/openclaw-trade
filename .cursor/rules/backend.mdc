@@ -1,0 +1,131 @@
+---
+description: OpenClaw 백엔드 개발 규칙 (FastAPI + 에이전트 시스템)
+globs: ["backend/**/*"]
+alwaysApply: false
+---
+
+# 백엔드 코드 규칙
+
+## 기술 스택
+- **프레임워크**: FastAPI 0.110+
+- **언어**: Python 3.11+
+- **에이전트**: OpenClaw BaseAgent 상속
+- **거래소**: ccxt 4.x
+- **DB ORM**: SQLAlchemy 2.x (async)
+- **스케줄러**: APScheduler
+
+## 프로젝트 구조
+```
+backend/
+├── agents.md              # 에이전트 명세 (항상 최신화)
+├── main.py                # FastAPI 앱 엔트리포인트
+├── agents/                # OpenClaw 에이전트
+│   ├── base_agent.py      # BaseAgent 추상 클래스
+│   ├── market_analyzer.py # 시장 분석 에이전트
+│   ├── strategy_agent.py  # 전략 에이전트
+│   ├── risk_manager.py    # 리스크 관리 에이전트
+│   ├── execution_agent.py # 주문 실행 에이전트
+│   └── portfolio_agent.py # 포트폴리오 에이전트
+├── core/
+│   ├── config.py          # 설정 (pydantic-settings)
+│   ├── database.py        # DB 연결
+│   └── websocket.py       # WebSocket 매니저
+├── exchange/
+│   ├── connector.py       # ccxt 래퍼
+│   └── models.py          # 거래소 데이터 모델
+├── strategies/
+│   ├── base_strategy.py   # BaseStrategy 추상 클래스
+│   ├── rsi_strategy.py    # RSI 전략
+│   ├── macd_strategy.py   # MACD 전략
+│   └── bollinger_strategy.py
+├── models/                # SQLAlchemy 모델
+│   ├── trade.py
+│   ├── agent_log.py
+│   └── portfolio.py
+├── routers/               # FastAPI 라우터
+│   ├── portfolio.py
+│   ├── trades.py
+│   ├── agents.py
+│   ├── strategies.py
+│   └── settings.py
+└── requirements.txt
+```
+
+## 에이전트 구현 규칙
+
+### BaseAgent 상속
+```python
+# 모든 에이전트는 BaseAgent를 상속해야 함
+class MyAgent(BaseAgent):
+    agent_type: str = "my_agent"
+    
+    async def analyze(self, data: dict) -> AgentSignal:
+        """에이전트 핵심 로직 - 반드시 구현"""
+        ...
+    
+    async def run_cycle(self):
+        """1 사이클 실행 - 반드시 구현"""
+        ...
+```
+
+### 에이전트 통신
+- 에이전트 간 통신은 `AgentSignal` 객체로
+- 직접 함수 호출이 아닌 이벤트 버스 사용 권장
+- 각 에이전트는 독립적으로 실행 가능해야 함
+
+### 거래소 API 호출
+```python
+# 모든 거래소 호출은 try-except + 로깅
+async def fetch_ticker(self, symbol: str):
+    try:
+        ticker = await self.exchange.fetch_ticker(symbol)
+        return ticker
+    except ccxt.NetworkError as e:
+        logger.error(f"네트워크 오류: {e}")
+        raise
+    except ccxt.ExchangeError as e:
+        logger.error(f"거래소 오류: {e}")
+        raise
+```
+
+## FastAPI 규칙
+
+### 라우터 구조
+```python
+from fastapi import APIRouter, Depends
+router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
+
+@router.get("/", response_model=PortfolioResponse)
+async def get_portfolio(db: AsyncSession = Depends(get_db)):
+    """포트폴리오 조회"""
+    ...
+```
+
+### Pydantic 모델
+- 요청/응답 모델은 `schemas/` 폴더에 별도 정의
+- 모든 API 응답은 Pydantic 모델 사용
+- `Optional` 필드에는 기본값 명시
+
+### WebSocket
+```python
+@app.websocket("/ws/portfolio")
+async def websocket_portfolio(websocket: WebSocket):
+    await manager.connect(websocket, "portfolio")
+    try:
+        while True:
+            data = await get_portfolio_data()
+            await manager.send(websocket, data)
+            await asyncio.sleep(1)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, "portfolio")
+```
+
+## 데이터베이스 규칙
+- 모든 DB 조작은 async/await 사용
+- 트랜잭션은 context manager로 관리
+- 마이그레이션은 Alembic 사용
+
+## 보안 규칙
+- API 키는 환경변수에서만 로드
+- CORS 설정은 개발/운영 환경 분리
+- Rate limiting 적용 (거래소 API 제한 준수)

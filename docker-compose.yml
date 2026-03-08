@@ -1,0 +1,48 @@
+version: '3.9'
+
+services:
+  # 백엔드 FastAPI + OpenClaw 에이전트
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: openclaw-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite+aiosqlite:///./data/openclaw.db
+      - PAPER_TRADING=true
+      - DEFAULT_EXCHANGE=binance
+      - DEFAULT_SYMBOLS=BTC/USDT,ETH/USDT
+      - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./backend:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 프론트엔드 Next.js
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: openclaw-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  openclaw_data:

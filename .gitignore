@@ -1,0 +1,328 @@
+# ============================================================
+# OpenClaw Trading System - .gitignore
+# 보안 최적화 버전 | Security-Optimized
+# ============================================================
+
+# ============================================================
+# 🔐 보안 핵심 (절대 커밋 금지!)
+# ============================================================
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.env
+secrets/
+secret/
+credentials/
+private/
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*.csr
+*.pub
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+*.ppk
+
+# API 키 관련 파일
+api_keys.*
+api-keys.*
+config/secrets.*
+
+# ============================================================
+# 🐍 Python / Backend
+# ============================================================
+# 바이트 컴파일
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 가상 환경
+venv/
+env/
+ENV/
+.venv/
+.env/
+virtualenv/
+.virtualenvs/
+
+# 배포 / 빌드
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# pytest / 테스트
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+nosetests.xml
+coverage/
+
+# mypy / 타입 체커
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# 로컬 개발 설정
+*.sage.py
+celerybeat-schedule
+celerybeat.pid
+
+# ============================================================
+# 📦 Node.js / Frontend
+# ============================================================
+node_modules/
+.npm/
+.yarn/
+.pnp/
+.pnp.js
+yarn-error.log
+npm-debug.log*
+yarn-debug.log*
+.yarn-integrity
+.node_repl_history
+
+# Next.js 빌드
+.next/
+out/
+.turbo/
+.vercel/
+
+# Nuxt / 기타 프레임워크
+.nuxt/
+.output/
+
+# 프론트엔드 빌드 결과물
+dist/
+build/
+
+# 번들러 캐시
+.parcel-cache/
+.cache/
+.eslintcache
+.stylelintcache
+
+# TypeScript
+*.tsbuildinfo
+
+# ============================================================
+# 🗄️ 데이터베이스 (민감 데이터)
+# ============================================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+data/*.db
+data/*.sqlite
+# PostgreSQL 덤프
+*.dump
+*.sql.gz
+# 백업 파일
+*.bak
+*.backup
+
+# ============================================================
+# 📁 운영체제 및 에디터
+# ============================================================
+# macOS
+.DS_Store
+.DS_Store?
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.AppleDB
+.AppleDesktop
+.DocumentRevisions-V100
+.fseventsd
+.Temporaryitems
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDouble
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================
+# 🛠️ 개발 도구 / IDE
+# ============================================================
+# JetBrains (IntelliJ, PyCharm 등)
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# VSCode / Cursor
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.code-workspace
+
+# Vim / Emacs
+*.swp
+*.swo
+*.swn
+Session.vim
+.netrwhist
+.vim/
+*~
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-workspace
+
+# ============================================================
+# 🐳 Docker
+# ============================================================
+# Docker 오버라이드 (로컬 전용)
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.dev.yml
+
+# ============================================================
+# 📊 로그 파일 (보안 정보 포함 가능)
+# ============================================================
+logs/
+*.log
+*.log.*
+*.out
+log/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ============================================================
+# 📈 거래/금융 데이터 (민감)
+# ============================================================
+# 실거래 기록
+live_trades/
+real_trades/
+production_data/
+
+# 백테스트 결과 (대용량)
+backtest_results/
+backtest_data/
+
+# 거래소 캐시 데이터
+exchange_cache/
+market_data/
+
+# ============================================================
+# ☁️ 클라우드 / 배포
+# ============================================================
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+
+# Ansible
+*.retry
+
+# AWS
+.aws/
+
+# GCP
+.gcp/
+service-account*.json
+*-service-account.json
+
+# ============================================================
+# 🧪 테스트 / 임시 파일
+# ============================================================
+tmp/
+temp/
+.tmp/
+*.tmp
+*.temp
+*.swp
+*.bak
+
+# 업로드 파일
+uploads/
+media/
+
+# ============================================================
+# 🗜️ 압축 파일
+# ============================================================
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+*.tar.gz
+*.tgz
+*.tar.bz2
+
+# ============================================================
+# 📝 기타 민감 파일
+# ============================================================
+# 트레이딩 설정 (민감한 파라미터 포함 가능)
+local_config.py
+local_settings.py
+local_config.yaml
+local_config.json
+
+# 개인 노트
+TODO.local
+NOTES.local
+*.local.md
