@@ -6,6 +6,8 @@ alwaysApply: false
 
 # 백엔드 코드 규칙
 
+> **세션 시작 전 `docs/handoff/handoff.md`를 읽고 현황을 파악하세요.**
+
 ## 기술 스택
 - **프레임워크**: FastAPI 0.110+
 - **언어**: Python 3.11+

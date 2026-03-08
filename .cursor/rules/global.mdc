@@ -6,10 +6,26 @@ alwaysApply: true
 
 # OpenClaw 전역 코드 규칙
 
+## 🔴 세션 시작 시 필수 행동 (최우선)
+
+> **새 에이전트 / 새 터미널 / 새 대화를 시작할 때 반드시 아래 파일을 가장 먼저 읽으세요.**
+
+```
+docs/handoff/handoff.md
+```
+
+- 이 파일에는 **완료된 개발**, **미완성 항목**, **실행 방법**, **알려진 버그**가 기록됩니다.
+- 코드 작업 전 반드시 읽고 현황을 파악한 뒤 작업하세요.
+- 세션 종료 또는 주요 기능 완성 시 `handoff.md`의 **최종 업데이트 날짜와 내용을 갱신**하세요.
+
+---
+
 ## 프로젝트 구조
 ```
 openclaw/
-├── docs/prd/          # PRD 문서 (신기능 개발 전 반드시 작성)
+├── docs/
+│   ├── handoff/handoff.md   # ← 항상 먼저 읽는 인수인계 문서
+│   └── prd/                 # PRD 문서 (신기능 개발 전 반드시 작성)
 ├── backend/           # FastAPI 백엔드 + OpenClaw 에이전트
 ├── frontend/          # Next.js 14 프론트엔드
 ├── agents.md          # 루트 에이전트 명세
@@ -17,10 +33,12 @@ openclaw/
 ```
 
 ## 신기능 개발 절차 (필수)
-1. `docs/prd/` 폴더에 `{기능명}.md` PRD 문서 먼저 작성
-2. PRD에 사용자 스토리, API 명세, 데이터 모델 정의
-3. PRD 기반으로 백엔드 → 프론트엔드 순서로 개발
-4. 해당 폴더의 `agents.md` 업데이트 필수
+1. **`docs/handoff/handoff.md` 읽기** — 현재 개발 현황 파악
+2. `docs/prd/` 폴더에 `{기능명}.md` PRD 문서 먼저 작성
+3. PRD에 사용자 스토리, API 명세, 데이터 모델 정의
+4. PRD 기반으로 백엔드 → 프론트엔드 순서로 개발
+5. 해당 폴더의 `agents.md` 업데이트 필수
+6. **`docs/handoff/handoff.md` 갱신** — 완료 항목 체크, 날짜 업데이트
 
 ## 공통 규칙
 
@@ -47,3 +65,37 @@ openclaw/
 - 새 에이전트 추가 시 해당 폴더의 `agents.md` 업데이트
 - 에이전트 인터페이스 변경 시 `agents.md` 반드시 반영
 - PR 전 `agents.md` 최신 상태 확인
+
+---
+
+## 📸 Git 커밋 스크린샷 규칙
+
+### pre-commit hook 설정 (최초 1회)
+```bash
+cp scripts/hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+### 동작 방식
+- `git commit` 시 **변경된 프론트엔드 파일에 해당하는 페이지만** 자동 캡처
+- `docs/screenshots/` 에 저장 후 커밋에 자동 포함
+- Chrome + 프론트엔드 서버(localhost:3001)가 실행 중일 때만 동작
+- 둘 다 꺼져 있으면 스크린샷 없이 커밋 정상 진행
+
+### 페이지 ↔ 파일 매핑
+| 변경 파일 경로 | 캡처 페이지 |
+|---|---|
+| `src/app/page.tsx`, `components/dashboard/` | `dashboard.png` |
+| `src/app/market/`, `components/market/` | `market.png` |
+| `src/app/portfolio/` | `portfolio.png` |
+| `src/app/agents/` | `agents.png` |
+| `src/app/trades/`, `components/trading/` | `trades.png` |
+| `src/app/settings/` | `settings.png` |
+| 백엔드 파일만 변경 | 스크린샷 없음 |
+
+### 새 페이지 추가 시
+`scripts/hooks/pre-commit` 의 `PAGES` 배열에 아래 형식으로 추가:
+```bash
+["frontend/src/app/새페이지"]="새페이지:/새페이지경로"
+```
+추가 후 `.git/hooks/pre-commit` 에도 동일하게 반영하거나 `cp` 재실행.

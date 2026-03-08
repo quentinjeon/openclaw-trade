@@ -15,6 +15,7 @@ import {
   CandlestickSeries,
   LineSeries,
   HistogramSeries,
+  createSeriesMarkers,
 } from 'lightweight-charts'
 
 export interface OHLCVCandle {
@@ -26,11 +27,19 @@ export interface OHLCVCandle {
   volume: number
 }
 
+export interface ChartMarker {
+  time: number                   // Unix timestamp (초)
+  type: 'BUY' | 'SELL'
+  price?: number
+  label?: string
+}
+
 interface CandleChartProps {
   candles: OHLCVCandle[]
   showMA?: boolean
   showBB?: boolean
   height?: number
+  markers?: ChartMarker[]        // Buy/Sell 마커
 }
 
 // ── 이동평균 계산 ──────────────────────────────────────
@@ -66,6 +75,7 @@ export default function CandleChart({
   showMA = true,
   showBB = true,
   height = 480,
+  markers = [],
 }: CandleChartProps) {
   // DOM 컨테이너만 ref로 관리, 차트 인스턴스는 클로저로 처리
   const mainRef = useRef<HTMLDivElement>(null)
@@ -136,6 +146,20 @@ export default function CandleChart({
       bbLow.setData(lower)
     }
 
+    // Buy/Sell 마커 (lightweight-charts v5: createSeriesMarkers 사용)
+    if (markers && markers.length > 0) {
+      const seriesMarkers = markers.map((m) => ({
+        time: m.time as number,
+        position: m.type === 'BUY' ? ('belowBar' as const) : ('aboveBar' as const),
+        color: m.type === 'BUY' ? '#22c55e' : '#ef4444',
+        shape: m.type === 'BUY' ? ('arrowUp' as const) : ('arrowDown' as const),
+        text: m.type === 'BUY' ? '▲ B' : '▼ S',
+      }))
+      // 시간순 정렬 필수 (lightweight-charts 요구사항)
+      seriesMarkers.sort((a, b) => (a.time as number) - (b.time as number))
+      createSeriesMarkers(candleSeries, seriesMarkers)
+    }
+
     chart.timeScale().fitContent()
 
     // ── 거래량 서브 차트 ──────────────────────────────
@@ -186,7 +210,7 @@ export default function CandleChart({
       volumeChart.remove()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candles, showMA, showBB, height])
+  }, [candles, showMA, showBB, height, markers])
 
   return (
     <div className="w-full" style={{ height }}>

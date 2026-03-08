@@ -140,5 +140,17 @@ class ApprovedOrder(BaseModel):
 
 ---
 
-*최종 업데이트: 2026-03-08*  
-*버전: 1.0.0*
+---
+
+## 추가 기능 모듈
+
+### 내 지갑 (Wallet)
+- **백엔드**: `backend/routers/wallet.py` — `GET /api/wallet/balance`
+- **프론트엔드**: `frontend/src/app/wallet/page.tsx`
+- **역할**: Binance 계좌 잔액 조회 및 KRW 환산 표시
+- **PRD**: `docs/prd/wallet.md`
+
+---
+
+*최종 업데이트: 2026-03-09*  
+*버전: 1.1.0*

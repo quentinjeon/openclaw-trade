@@ -42,7 +42,7 @@ async def get_db() -> AsyncSession:
 async def init_db():
     """데이터베이스 테이블 초기화"""
     # 모델 import (테이블 생성을 위해 필요)
-    from models import trade, agent_log, portfolio  # noqa: F401
+    from models import trade, agent_log, portfolio, system_condition  # noqa: F401
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

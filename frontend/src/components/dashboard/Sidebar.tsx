@@ -12,13 +12,17 @@ import {
   Settings,
   LineChart,
   Zap,
+  Wallet,
+  BotMessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/', icon: LayoutDashboard, label: '대시보드' },
   { href: '/market', icon: LineChart, label: '시황 분석' },
+  { href: '/system-trading', icon: BotMessageSquare, label: '시스템 트레이딩' },
   { href: '/portfolio', icon: BarChart2, label: '포트폴리오' },
+  { href: '/wallet', icon: Wallet, label: '내 지갑' },
   { href: '/agents', icon: Activity, label: '에이전트' },
   { href: '/trades', icon: History, label: '거래 내역' },
   { href: '/settings', icon: Settings, label: '설정' },

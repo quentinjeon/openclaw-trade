@@ -1,0 +1,95 @@
+#!/bin/zsh
+# ============================================================
+# OpenClaw - pre-commit hook
+# 커밋되는 파일 중 변경된 프론트엔드 페이지만 스크린샷 캡처
+# ============================================================
+
+SCREENSHOT_DIR="$(git rev-parse --show-toplevel)/docs/screenshots"
+FRONTEND_URL="http://localhost:3001"
+
+# 스테이징된 파일 목록
+STAGED_FILES=$(git diff --cached --name-only)
+
+# 변경된 파일에서 캡처할 페이지 추출
+declare -A PAGES=(
+  ["frontend/src/app/page.tsx"]="dashboard:/"
+  ["frontend/src/app/market"]="market:/market"
+  ["frontend/src/app/portfolio"]="portfolio:/portfolio"
+  ["frontend/src/app/agents"]="agents:/agents"
+  ["frontend/src/app/trades"]="trades:/trades"
+  ["frontend/src/app/settings"]="settings:/settings"
+  ["frontend/src/components/dashboard"]="dashboard:/"
+  ["frontend/src/components/market"]="market:/market"
+  ["frontend/src/components/portfolio"]="portfolio:/portfolio"
+  ["frontend/src/components/agents"]="agents:/agents"
+  ["frontend/src/components/trading"]="trades:/trades"
+)
+
+# 캡처할 페이지 목록 수집 (중복 제거)
+declare -A TO_CAPTURE
+
+for PATTERN in "${(@k)PAGES}"; do
+  if echo "$STAGED_FILES" | grep -q "$PATTERN"; then
+    NAME=$(echo "${PAGES[$PATTERN]}" | cut -d: -f1)
+    PATH_URL=$(echo "${PAGES[$PATTERN]}" | cut -d: -f2)
+    TO_CAPTURE[$NAME]=$PATH_URL
+  fi
+done
+
+# 캡처할 페이지가 없으면 종료
+if [ ${#TO_CAPTURE} -eq 0 ]; then
+  exit 0
+fi
+
+# Chrome 실행 중인지 확인
+if ! pgrep -x "Google Chrome" > /dev/null; then
+  echo "⚠️  [pre-commit] Chrome이 실행 중이지 않아 스크린샷을 건너뜁니다."
+  exit 0
+fi
+
+# 프론트엔드 서버 응답 확인
+if ! curl -s --max-time 2 "$FRONTEND_URL" > /dev/null; then
+  echo "⚠️  [pre-commit] 프론트엔드 서버가 응답하지 않아 스크린샷을 건너뜁니다."
+  exit 0
+fi
+
+echo "📸 [pre-commit] 변경된 페이지 스크린샷 캡처 중..."
+
+mkdir -p "$SCREENSHOT_DIR"
+
+# 크롬 창 범위 계산 (브라우저 UI 제외)
+BOUNDS=$(osascript -e '
+tell application "Google Chrome"
+  set b to bounds of window 1
+  return b
+end tell' 2>/dev/null)
+
+if [ -z "$BOUNDS" ]; then
+  echo "⚠️  [pre-commit] Chrome 창 위치를 가져올 수 없어 스크린샷을 건너뜁니다."
+  exit 0
+fi
+
+LEFT=$(echo $BOUNDS | awk -F',' '{print $1}' | tr -d ' ')
+TOP=$(echo $BOUNDS | awk -F',' '{print $2}' | tr -d ' ')
+RIGHT=$(echo $BOUNDS | awk -F',' '{print $3}' | tr -d ' ')
+BOTTOM=$(echo $BOUNDS | awk -F',' '{print $4}' | tr -d ' ')
+X=$LEFT
+Y=$((TOP + 92))
+W=$((RIGHT - LEFT))
+H=$((BOTTOM - Y))
+
+# 변경된 페이지만 캡처
+for PAGE in "${(@k)TO_CAPTURE}"; do
+  URL="${FRONTEND_URL}${TO_CAPTURE[$PAGE]}"
+  OUT="$SCREENSHOT_DIR/${PAGE}.png"
+
+  osascript -e "tell application \"Google Chrome\" to set URL of active tab of window 1 to \"$URL\"" 2>/dev/null
+  sleep 3
+  screencapture -R "${X},${Y},${W},${H}" "$OUT" 2>/dev/null
+  echo "  ✅ ${PAGE}.png (${URL})"
+done
+
+git add "$SCREENSHOT_DIR/"*.png 2>/dev/null
+
+echo "📸 [pre-commit] 완료!"
+exit 0

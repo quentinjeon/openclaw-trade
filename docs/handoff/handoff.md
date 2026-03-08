@@ -10,7 +10,7 @@
 | 항목 | 내용 |
 |------|------|
 | **최종 업데이트** | 2026-03-09 (KST) |
-| **버전** | v0.3.0 |
+| **버전** | v0.5.0 |
 | **백엔드 포트** | `8002` |
 | **프론트엔드 포트** | `3001` |
 | **DB** | SQLite (`backend/trading.db`) |
@@ -37,6 +37,39 @@ npm run dev -- --port 3001
 - 프론트엔드: http://localhost:3001
 - 백엔드 API: http://localhost:8002
 - API 문서 (Swagger): http://localhost:8002/docs
+
+---
+
+## 🕐 최신 업데이트 (v0.5.0 — 2026-03-09)
+
+### 시스템 트레이딩 기능 추가
+
+- `docs/prd/system-trading.md` — 30년 트레이딩 도구 관점 상세 PRD
+- `backend/models/system_condition.py` — 조건식 DB 모델
+- `backend/services/condition_evaluator.py` — 조건 평가 엔진 (ta 라이브러리 활용)
+- `backend/services/backtester.py` — 백테스트 엔진 (수수료 0.1% 반영)
+- `backend/services/rule_parser.py` — Text-to-Rule 파서 (한국어 패턴 + 영어)
+- `backend/routers/system_trading.py` — REST API 8개 엔드포인트
+- `frontend/src/types/system_trading.ts` — 타입 정의 + 지표/연산자 옵션
+- `frontend/src/components/market/CandleChart.tsx` — Buy/Sell 마커 지원 추가
+- `frontend/src/components/system-trading/ConditionBuilder.tsx` — 조건 편집 패널
+- `frontend/src/components/system-trading/BacktestResultPanel.tsx` — 결과 패널
+- `frontend/src/app/system-trading/page.tsx` — 메인 페이지 (차트+편집 2패널)
+- `Sidebar.tsx` — "시스템 트레이딩" 메뉴 추가 (BotMessageSquare 아이콘)
+
+---
+
+## 🕐 이전 업데이트 (v0.4.0 — 2026-03-09)
+
+### 내 지갑 페이지 추가
+- `backend/routers/wallet.py` — `GET /api/wallet/balance` (코인별 잔액 + USD/KRW 환산)
+- `frontend/src/app/wallet/page.tsx` — 내 지갑 페이지 (SWR 30초 갱신)
+- `frontend/src/components/wallet/WalletSummaryCards.tsx` — 상단 요약 카드
+- `frontend/src/components/wallet/AssetTable.tsx` — 코인 자산 테이블 + 비중 프로그레스 바
+- `frontend/src/types/wallet.ts` — 타입 정의
+- `Sidebar.tsx` — "내 지갑" 메뉴 추가 (`Wallet` 아이콘)
+- `docs/prd/wallet.md` — PRD 문서
+- `.cursor/rules/wallet.mdc` — MDC 규칙
 
 ---
 
@@ -70,11 +103,24 @@ npm run dev -- --port 3001
 - [x] `backend/models/agent_log.py` — 에이전트 로그 테이블
 - [x] `backend/models/portfolio.py` — 포트폴리오 스냅샷 테이블
 
+#### 시스템 트레이딩
+- [x] `backend/models/system_condition.py` — 조건식 DB 모델
+- [x] `backend/services/condition_evaluator.py` — 조건 평가 엔진 (20+ 지표 지원)
+- [x] `backend/services/backtester.py` — 백테스트 엔진 (수수료 포함, MDD 계산)
+- [x] `backend/services/rule_parser.py` — 자연어 → 조건 파서 (패턴 매칭 30+ 패턴)
+
 #### API 라우터
 - [x] `backend/routers/portfolio.py` — `GET /api/portfolio`
 - [x] `backend/routers/trades.py` — `GET /api/trades`
 - [x] `backend/routers/agents.py` — `GET/POST /api/agents` (시작/중지)
 - [x] `backend/routers/settings.py` — `GET/PUT /api/settings`
+- [x] `backend/routers/wallet.py` — `GET /api/wallet/balance` (지갑 잔액)
+- [x] `backend/routers/system_trading.py` — 시스템 트레이딩 API
+  - [x] `GET/POST/PUT/DELETE /api/system/conditions` — 조건식 CRUD
+  - [x] `POST /api/system/text-to-rule` — 자연어 → 조건 변환
+  - [x] `GET /api/system/templates` — 전략 템플릿 5종
+  - [x] `POST /api/system/backtest` — 백테스트 실행
+  - [x] `POST /api/system/check-now` — 현재 조건 즉시 체크
 - [x] `backend/routers/market.py` — 시황 분석 API (아래 상세)
   - [x] `GET /api/market/overview` — BTC/ETH 요약
   - [x] `GET /api/market/ticker/{symbol}` — 개별 시세
@@ -86,10 +132,12 @@ npm run dev -- --port 3001
 
 ### 프론트엔드
 
-#### 페이지 (6개)
+#### 페이지 (8개)
 - [x] `/` — 메인 대시보드 (포트폴리오 요약, 에이전트 상태, 실시간 로그)
 - [x] `/market` — 시황 분석 (TradingView 캔들차트 고도화 - 3패널 레이아웃)
+- [x] `/system-trading` — 시스템 트레이딩 (조건식 편집 + 백테스트 + Buy/Sell 차트 마커)
 - [x] `/portfolio` — 포트폴리오 상세
+- [x] `/wallet` — 내 지갑 (Binance 계좌 잔액, KRW 환산, 비중 차트)
 - [x] `/agents` — 에이전트 모니터링 + 로그
 - [x] `/trades` — 거래 내역
 - [x] `/settings` — 리스크/전략 설정
@@ -180,7 +228,9 @@ npm run dev -- --port 3001
 | 프론트엔드 환경변수 | `frontend/.env.local` |
 | DB 파일 | `backend/trading.db` |
 | 시황 분석 라우터 | `backend/routers/market.py` |
+| 지갑 라우터 | `backend/routers/wallet.py` |
 | 시황 분석 페이지 | `frontend/src/app/market/page.tsx` |
+| 내 지갑 페이지 | `frontend/src/app/wallet/page.tsx` |
 | 캔들 차트 컴포넌트 | `frontend/src/components/market/CandleChart.tsx` |
 | API 클라이언트 | `frontend/src/services/api.ts` |
 | 공통 유틸 | `frontend/src/lib/utils.ts` |

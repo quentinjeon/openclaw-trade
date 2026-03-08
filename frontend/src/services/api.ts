@@ -6,6 +6,15 @@ import type { Portfolio } from '@/types/portfolio'
 import type { Agent, AgentLog, RiskConfig, StrategyConfig, SystemSettings } from '@/types/agent'
 import type { Trade, TradeListResponse } from '@/types/trade'
 import type { MarketOverview, TickerInfo, CandleResponse, WatchlistResponse, FxRateResponse } from '@/types/market'
+import type { WalletBalance } from '@/types/wallet'
+import type {
+  SystemCondition,
+  ConditionCreate,
+  TextToRuleResponse,
+  BacktestResult,
+  StrategyTemplate,
+  ConditionGroup,
+} from '@/types/system_trading'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
 
@@ -120,6 +129,81 @@ export const marketApi = {
     ),
   getWatchlist: () => fetchJson<WatchlistResponse>('/api/market/watchlist'),
   getFxRate: () => fetchJson<FxRateResponse>('/api/market/fx'),
+}
+
+// ──────────────────────────────────────────────
+// 지갑 API
+// ──────────────────────────────────────────────
+export const walletApi = {
+  getBalance: (): Promise<WalletBalance> =>
+    fetchJson('/api/wallet/balance'),
+}
+
+// ──────────────────────────────────────────────
+// 시스템 트레이딩 API
+// ──────────────────────────────────────────────
+export const systemTradingApi = {
+  // 조건식 CRUD
+  listConditions: (): Promise<SystemCondition[]> =>
+    fetchJson('/api/system/conditions'),
+
+  createCondition: (data: ConditionCreate): Promise<SystemCondition> =>
+    fetchJson('/api/system/conditions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateCondition: (id: number, data: Partial<ConditionCreate>): Promise<SystemCondition> =>
+    fetchJson(`/api/system/conditions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteCondition: (id: number): Promise<{ message: string }> =>
+    fetchJson(`/api/system/conditions/${id}`, { method: 'DELETE' }),
+
+  // Text-to-Rule
+  textToRule: (text: string, side: 'buy' | 'sell'): Promise<TextToRuleResponse> =>
+    fetchJson('/api/system/text-to-rule', {
+      method: 'POST',
+      body: JSON.stringify({ text, side }),
+    }),
+
+  // 전략 템플릿
+  getTemplates: (): Promise<{ templates: StrategyTemplate[] }> =>
+    fetchJson('/api/system/templates'),
+
+  // 백테스트
+  backtest: (params: {
+    condition_id?: number
+    buy_conditions?: ConditionGroup
+    sell_conditions?: ConditionGroup
+    symbol: string
+    timeframe: string
+    limit?: number
+  }): Promise<BacktestResult> =>
+    fetchJson('/api/system/backtest', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
+
+  // 현재 조건 체크
+  checkNow: (params: {
+    condition_id?: number
+    buy_conditions?: ConditionGroup
+    sell_conditions?: ConditionGroup
+    symbol: string
+  }): Promise<{
+    triggered: boolean
+    side: 'BUY' | 'SELL' | 'HOLD'
+    current_values: Record<string, number>
+    passed_buy_conditions: string[]
+    failed_buy_conditions: string[]
+  }> =>
+    fetchJson('/api/system/check-now', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
 }
 
 // ──────────────────────────────────────────────

@@ -1,0 +1,104 @@
+---
+description: OpenClaw 내 지갑 기능 개발 규칙
+globs: ["**/wallet*", "**/routers/wallet.py", "**/app/wallet/**"]
+alwaysApply: false
+---
+
+# 내 지갑 (Wallet) 기능 개발 규칙
+
+## 개요
+Binance 계좌 잔액을 조회하고 표시하는 "내 지갑" 기능에 대한 개발 규칙.  
+PRD: `docs/prd/wallet.md`
+
+---
+
+## 백엔드 규칙 (`backend/routers/wallet.py`)
+
+### 필수 사항
+- `ExchangeConnector`는 `main.py`에서 전역으로 주입 (`from main import exchange`)
+- 환율은 `backend/routers/market.py`의 `_fx_cache`를 재사용 (새로운 HTTP 호출 금지)
+- 모든 거래소 API 호출에 `try-except` 필수
+- USDT 가격은 `1.0` 고정 처리 (fetch_ticker 호출 생략)
+- 응답 스키마는 Pydantic BaseModel로 정의
+
+### 자산 계산 순서
+```python
+# 1. fetch_balance() → 코인별 수량
+# 2. USDT: price = 1.0
+# 3. 기타: fetch_ticker("{CURRENCY}/USDT") → price
+# 4. usd_value = amount × price
+# 5. krw_value = usd_value × fx_rate
+# 6. pct = (usd_value / total_usd) × 100
+```
+
+### 응답 구조
+```python
+class WalletAsset(BaseModel):
+    currency: str        # "BTC", "USDT"
+    amount: float        # 보유 수량
+    usd_value: float     # USD 환산 가치
+    krw_value: float     # KRW 환산 가치
+    pct_of_total: float  # 비중 (%)
+    current_price_usd: float
+    change_24h_pct: float
+
+class WalletBalanceResponse(BaseModel):
+    total_usd: float
+    total_krw: float
+    cash_usd: float      # USDT 잔고
+    coin_value_usd: float  # 코인 총 가치
+    asset_count: int
+    mode: str            # "paper" | "live"
+    fx_rate: float
+    updated_at: str
+    assets: List[WalletAsset]
+```
+
+---
+
+## 프론트엔드 규칙
+
+### 파일 위치
+```
+frontend/src/
+├── app/wallet/page.tsx           # 페이지
+├── components/wallet/
+│   ├── WalletSummaryCards.tsx   # 상단 4개 요약 카드
+│   └── AssetTable.tsx           # 코인 자산 테이블
+├── types/wallet.ts               # 타입 정의
+```
+
+### API 클라이언트
+```typescript
+// services/api.ts 에 추가
+export const walletApi = {
+  getBalance: () => fetchJson<WalletBalance>('/api/wallet/balance'),
+}
+```
+
+### SWR 갱신 주기
+- 자동 갱신: `refreshInterval: 30000` (30초)
+- 수동 새로고침: `mutate()` 호출
+
+### UI 규칙
+- PAPER 모드: `text-purple-400`, 배지 표시
+- LIVE 모드: `text-green-400`, 배지 표시
+- 수익 (24h 양수): `text-green-400`
+- 손실 (24h 음수): `text-red-400`
+- 비중 프로그레스 바: `bg-blue-500` (USDT), `bg-yellow-500` (BTC), 기본 `bg-slate-500`
+- 소액 기준: $0.01 USD 미만
+
+### 사이드바 아이콘
+- `Wallet` (lucide-react) 사용
+- 메뉴 순서: 대시보드 → 시황 분석 → 포트폴리오 → **내 지갑** → 에이전트 → 거래 내역 → 설정
+
+---
+
+## 금지 사항
+- 환율 조회를 위한 별도 외부 API 호출 금지 (기존 캐시 재사용)
+- 출금(Withdrawal) 관련 API 호출 절대 금지
+- 하드코딩된 코인 목록 금지 (동적으로 fetch_balance 결과 사용)
+
+---
+
+*최종 업데이트: 2026-03-09*
