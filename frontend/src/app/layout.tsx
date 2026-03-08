@@ -23,10 +23,8 @@ export default function RootLayout({
           <Sidebar />
 
           {/* 메인 콘텐츠 */}
-          <main className="flex-1 overflow-y-auto">
-            <div className="p-6">
-              {children}
-            </div>
+          <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            {children}
           </main>
         </div>
       </body>

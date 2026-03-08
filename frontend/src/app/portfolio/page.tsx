@@ -29,7 +29,7 @@ export default function PortfolioPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6 overflow-y-auto flex-1">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-100">포트폴리오</h1>

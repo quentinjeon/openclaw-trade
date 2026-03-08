@@ -104,7 +104,7 @@ export default function DashboardPage() {
   const trades = (tradesData as { trades: Parameters<typeof TradeHistoryTable>[0]['trades'] } | undefined)?.trades ?? []
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6 overflow-y-auto flex-1">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>

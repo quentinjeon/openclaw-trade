@@ -5,6 +5,7 @@
 import type { Portfolio } from '@/types/portfolio'
 import type { Agent, AgentLog, RiskConfig, StrategyConfig, SystemSettings } from '@/types/agent'
 import type { Trade, TradeListResponse } from '@/types/trade'
+import type { MarketOverview, TickerInfo, CandleResponse, WatchlistResponse, FxRateResponse } from '@/types/market'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
 
@@ -104,6 +105,21 @@ export const settingsApi = {
       method: 'PUT',
       body: JSON.stringify(config),
     }),
+}
+
+// ──────────────────────────────────────────────
+// 시황 API
+// ──────────────────────────────────────────────
+export const marketApi = {
+  getOverview: () => fetchJson<MarketOverview>('/api/market/overview'),
+  getTicker: (symbol: string) =>
+    fetchJson<TickerInfo>(`/api/market/ticker/${encodeURIComponent(symbol)}`),
+  getCandles: (symbol: string, timeframe = '1h', limit = 300) =>
+    fetchJson<CandleResponse>(
+      `/api/market/candles/${encodeURIComponent(symbol)}?timeframe=${timeframe}&limit=${limit}`
+    ),
+  getWatchlist: () => fetchJson<WatchlistResponse>('/api/market/watchlist'),
+  getFxRate: () => fetchJson<FxRateResponse>('/api/market/fx'),
 }
 
 // ──────────────────────────────────────────────

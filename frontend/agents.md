@@ -15,8 +15,9 @@
 ```
 src/
 ├── app/                         # Next.js App Router 페이지
-│   ├── layout.tsx               # 루트 레이아웃 + Sidebar
+│   ├── layout.tsx               # 루트 레이아웃 + Sidebar (flex, padding-free)
 │   ├── page.tsx                 # 대시보드 (메인)
+│   ├── market/page.tsx          # 시황 분석 (캔들차트 고도화 - 3패널 레이아웃)
 │   ├── portfolio/page.tsx       # 포트폴리오 상세
 │   ├── agents/page.tsx          # 에이전트 모니터링
 │   ├── trades/page.tsx          # 거래 내역
@@ -25,6 +26,8 @@ src/
 ├── components/
 │   ├── ui/                      # 기본 UI 컴포넌트
 │   │   └── card.tsx             # Card, CardHeader, CardContent...
+│   ├── market/                  # 시황 분석 전용
+│   │   └── CandleChart.tsx      # lightweight-charts 캔들 차트 (MA/BB/거래량)
 │   │
 │   ├── dashboard/               # 대시보드 전용
 │   │   ├── Sidebar.tsx          # 사이드바 네비게이션

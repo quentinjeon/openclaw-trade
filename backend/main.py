@@ -257,11 +257,12 @@ app.add_middleware(
 )
 
 # 라우터 등록
-from routers import portfolio, trades, agents, settings as settings_router
+from routers import portfolio, trades, agents, settings as settings_router, market
 app.include_router(portfolio.router)
 app.include_router(trades.router)
 app.include_router(agents.router)
 app.include_router(settings_router.router)
+app.include_router(market.router)
 
 
 # ──────────────────────────────────────────────

@@ -10,13 +10,14 @@ import {
   Activity,
   History,
   Settings,
-  TrendingUp,
+  LineChart,
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/', icon: LayoutDashboard, label: '대시보드' },
+  { href: '/market', icon: LineChart, label: '시황 분석' },
   { href: '/portfolio', icon: BarChart2, label: '포트폴리오' },
   { href: '/agents', icon: Activity, label: '에이전트' },
   { href: '/trades', icon: History, label: '거래 내역' },

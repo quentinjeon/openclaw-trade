@@ -15,7 +15,7 @@ export default function TradesPage() {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6 overflow-y-auto flex-1">
       <div>
         <h1 className="text-2xl font-bold text-slate-100">거래 내역</h1>
         <p className="text-sm text-slate-400 mt-1">자동매매 거래 기록</p>

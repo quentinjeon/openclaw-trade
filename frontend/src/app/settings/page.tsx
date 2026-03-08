@@ -105,7 +105,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6 overflow-y-auto flex-1">
       <div>
         <h1 className="text-2xl font-bold text-slate-100">설정</h1>
         <p className="text-sm text-slate-400 mt-1">리스크 파라미터 및 전략 설정</p>
