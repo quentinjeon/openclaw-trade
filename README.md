@@ -18,6 +18,11 @@
 
 ![대시보드](docs/screenshots/dashboard.png)
 
+### 📈 시황 분석
+> BTC/USDT 실시간 캔들차트, MA20/50/200, 볼린저밴드, RSI·MACD 기술 지표
+
+![시황분석](docs/screenshots/market.png)
+
 ### 💼 포트폴리오 현황
 > 총 자산 가치, 보유 포지션, 손익(PnL) 실시간 추적
 
