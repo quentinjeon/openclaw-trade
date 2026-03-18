@@ -16,6 +16,7 @@ import numpy as np
 from loguru import logger
 
 from services.condition_evaluator import evaluate_condition_group
+from core.config import settings
 
 
 # ──────────────────────────────────────────────
@@ -50,9 +51,10 @@ class BacktestResult(TypedDict):
 
 
 # ──────────────────────────────────────────────
-# 수수료 상수
+# 수수료 (설정과 동기: 테이커 % / 100)
 # ──────────────────────────────────────────────
-COMMISSION_RATE = 0.001  # 0.1% (Binance 기준 Taker fee)
+def _commission_rate() -> float:
+    return max(0.0, settings.TAKER_FEE_PCT_PER_SIDE) / 100.0
 
 
 # ──────────────────────────────────────────────
@@ -149,14 +151,14 @@ def run_backtest(
                     return_pct=None,
                     triggered_conditions=triggered,
                 ))
-                entry_price = next_open * (1 + COMMISSION_RATE)  # 수수료 포함
+                entry_price = next_open * (1 + _commission_rate())
                 entry_bar = i + 1
                 in_position = True
 
         else:
             # 매도 신호: 다음 봉 시가에 청산
             if sell_signals.iloc[i]:
-                exit_price = next_open * (1 - COMMISSION_RATE)  # 수수료 포함
+                exit_price = next_open * (1 - _commission_rate())
                 return_pct = (exit_price - entry_price) / entry_price * 100
 
                 triggered = [

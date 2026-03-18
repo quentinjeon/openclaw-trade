@@ -10,6 +10,8 @@ export interface Position {
   unrealized_pnl: number
   stop_loss?: number
   take_profit?: number
+  /** 봇이 진입·추적 중인 포지션 */
+  managed_by_bot?: boolean
 }
 
 export interface Portfolio {
@@ -25,4 +27,7 @@ export interface Portfolio {
   total_return_pct: number
   initial_balance: number
   updated_at: string
+  /** 실거래: 거래소 현물 잔고 동기화 */
+  live_trading?: boolean
+  data_source?: 'exchange' | 'simulated'
 }

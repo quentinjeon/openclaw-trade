@@ -42,7 +42,7 @@ export function TradeHistoryTable({ trades, isLoading }: TradeHistoryTableProps)
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-700">
-                  <th className="text-left pb-3 text-slate-400 font-medium">시간</th>
+                  <th className="text-left pb-3 text-slate-400 font-medium">시간 (KST)</th>
                   <th className="text-left pb-3 text-slate-400 font-medium">심볼</th>
                   <th className="text-left pb-3 text-slate-400 font-medium">구분</th>
                   <th className="text-right pb-3 text-slate-400 font-medium">수량</th>

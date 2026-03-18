@@ -76,6 +76,46 @@ async def get_agent_logs(
     ]
 
 
+@router.post("/bootstrap-auto-trading")
+async def bootstrap_auto_trading():
+    """
+    TRX 전량 USDT 매도(보유 시) + 미가동 에이전트 전부 시작.
+    서버 기동 시 `STARTUP_BOOTSTRAP_TRADING` 과 동일 효과(수동 재실행용).
+    """
+    from main import (
+        exchange,
+        portfolio_agent,
+        market_analyzer_agent,
+        strategy_agent,
+        risk_manager_agent,
+        execution_agent,
+        AGENT_INTERVALS,
+    )
+    from services.bootstrap_trading import sell_all_trx_to_usdt
+
+    trx = await sell_all_trx_to_usdt(exchange, portfolio_agent)
+    agents_started = []
+    pairs = [
+        ("market_analyzer", market_analyzer_agent, AGENT_INTERVALS["market_analyzer"]),
+        ("strategy", strategy_agent, 60),
+        ("risk_manager", risk_manager_agent, 30),
+        ("execution", execution_agent, AGENT_INTERVALS["execution"]),
+        ("portfolio", portfolio_agent, AGENT_INTERVALS["portfolio"]),
+    ]
+    for name, ag, interval in pairs:
+        if ag is None:
+            continue
+        await ag.start(interval_seconds=interval)
+        agents_started.append(name)
+
+    return {
+        "success": True,
+        "trx_sell": trx,
+        "agents_started": agents_started,
+        "message": "TRX 정리(해당 시) 및 자동매매 에이전트 시작 완료",
+    }
+
+
 @router.post("/{agent_type}/start")
 async def start_agent(agent_type: str):
     """에이전트 시작"""

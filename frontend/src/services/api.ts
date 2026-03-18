@@ -15,6 +15,19 @@ import type {
   StrategyTemplate,
   ConditionGroup,
 } from '@/types/system_trading'
+import type {
+  PickScannerConfig,
+  PickScanResponse,
+  AutoBuyOnceResponse,
+} from '@/types/picks'
+import type { PipelineOpportunitiesResponse, ActivePipeline } from '@/types/pipeline'
+import type {
+  OrderConstraints,
+  OrderPlaceResponse,
+  OpenOrdersResponse,
+  SellAllFreeResponse,
+  ExchangeTradeRow,
+} from '@/types/orders'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
 
@@ -91,6 +104,14 @@ export const agentApi = {
 
   stopAgent: (agentType: string): Promise<{ success: boolean; message: string }> =>
     fetchJson(`/api/agents/${agentType}/stop`, { method: 'POST' }),
+
+  /** TRX 전량 매도(보유 시) + 자동매매 에이전트 전부 시작 */
+  bootstrapAutoTrading: (): Promise<{
+    success: boolean
+    trx_sell: Record<string, unknown>
+    agents_started: string[]
+    message: string
+  }> => fetchJson('/api/agents/bootstrap-auto-trading', { method: 'POST' }),
 }
 
 // ──────────────────────────────────────────────
@@ -137,6 +158,73 @@ export const marketApi = {
 export const walletApi = {
   getBalance: (): Promise<WalletBalance> =>
     fetchJson('/api/wallet/balance'),
+}
+
+// ──────────────────────────────────────────────
+// 주문 API (시장가·지정가·호가·미체결·취소)
+// ──────────────────────────────────────────────
+export const ordersApi = {
+  getConstraints: (symbol: string): Promise<OrderConstraints> =>
+    fetchJson(`/api/orders/constraints/${encodeURIComponent(symbol)}`),
+
+  market: (body: {
+    symbol: string
+    side: 'buy' | 'sell'
+    amount: number
+    track_position?: boolean
+  }): Promise<OrderPlaceResponse> =>
+    fetchJson('/api/orders/market', { method: 'POST', body: JSON.stringify(body) }),
+
+  limit: (body: {
+    symbol: string
+    side: 'buy' | 'sell'
+    amount: number
+    price: number
+    wait_for_fill?: boolean
+    track_position?: boolean
+  }): Promise<OrderPlaceResponse> =>
+    fetchJson('/api/orders/limit', { method: 'POST', body: JSON.stringify(body) }),
+
+  orderbook: (body: {
+    symbol: string
+    side: 'buy' | 'sell'
+    amount: number
+    aggressive?: boolean
+    track_position?: boolean
+  }): Promise<OrderPlaceResponse> =>
+    fetchJson('/api/orders/orderbook', { method: 'POST', body: JSON.stringify(body) }),
+
+  sellAllFree: (body: {
+    symbol: string
+    execution?: 'market' | 'orderbook'
+    aggressive?: boolean
+  }): Promise<SellAllFreeResponse> =>
+    fetchJson('/api/orders/sell-all-free', { method: 'POST', body: JSON.stringify(body) }),
+
+  getOpen: (symbol?: string): Promise<OpenOrdersResponse> => {
+    const q = symbol ? `?symbol=${encodeURIComponent(symbol)}` : ''
+    return fetchJson(`/api/orders/open${q}`)
+  },
+
+  getStatus: (orderId: string, symbol: string): Promise<Record<string, unknown>> => {
+    const q = new URLSearchParams({ order_id: orderId, symbol })
+    return fetchJson(`/api/orders/status?${q}`)
+  },
+
+  cancel: (orderId: string, symbol: string): Promise<{ success: boolean; result: unknown }> => {
+    const q = new URLSearchParams({ order_id: orderId, symbol })
+    return fetchJson(`/api/orders/cancel?${q}`, { method: 'DELETE' })
+  },
+
+  cancelAll: (symbol?: string): Promise<{ cancelled: string[]; errors: unknown[]; count: number }> => {
+    const q = symbol ? `?symbol=${encodeURIComponent(symbol)}` : ''
+    return fetchJson(`/api/orders/cancel-all${q}`, { method: 'POST' })
+  },
+
+  exchangeTrades: (symbol: string, limit = 50): Promise<{ symbol: string; trades: ExchangeTradeRow[]; count: number }> => {
+    const q = new URLSearchParams({ symbol, limit: String(limit) })
+    return fetchJson(`/api/orders/exchange-trades?${q}`)
+  },
 }
 
 // ──────────────────────────────────────────────
@@ -204,6 +292,56 @@ export const systemTradingApi = {
       method: 'POST',
       body: JSON.stringify(params),
     }),
+}
+
+// ──────────────────────────────────────────────
+// 백테스트 스캐너 (종목 추천·자동매수)
+// ──────────────────────────────────────────────
+export const picksApi = {
+  getConfig: (): Promise<{
+    config: PickScannerConfig
+    template_options: { key: string; name: string }[]
+  }> => fetchJson('/api/picks/config'),
+
+  putConfig: (partial: Partial<PickScannerConfig>): Promise<{ success: boolean; config: PickScannerConfig }> =>
+    fetchJson('/api/picks/config', { method: 'PUT', body: JSON.stringify(partial) }),
+
+  scan: (params?: {
+    symbols?: string[]
+    timeframe?: string
+    candle_limit?: number
+    template_key?: string
+    condition_id?: number | null
+  }): Promise<PickScanResponse> =>
+    fetchJson('/api/picks/scan', {
+      method: 'POST',
+      body: JSON.stringify(params || {}),
+    }),
+
+  autoBuyOnce: (force?: boolean): Promise<AutoBuyOnceResponse> => {
+    const q = force ? '?force=true' : ''
+    return fetchJson(`/api/picks/auto-buy-once${q}`, { method: 'POST' })
+  },
+}
+
+// ──────────────────────────────────────────────
+// 백테스트 기반 단기 파이프라인 기회
+// ──────────────────────────────────────────────
+export const pipelineApi = {
+  getOpportunities: (): Promise<PipelineOpportunitiesResponse> =>
+    fetchJson('/api/pipeline-opportunities/'),
+
+  getActive: (): Promise<{ active: ActivePipeline | null }> =>
+    fetchJson('/api/pipeline-opportunities/active'),
+
+  activate: (symbol: string, strategyKey = 'larry_williams'): Promise<{ success: boolean; active: ActivePipeline }> =>
+    fetchJson('/api/pipeline-opportunities/activate', {
+      method: 'POST',
+      body: JSON.stringify({ symbol, strategy_key: strategyKey }),
+    }),
+
+  deactivate: (): Promise<{ success: boolean }> =>
+    fetchJson('/api/pipeline-opportunities/deactivate', { method: 'POST' }),
 }
 
 // ──────────────────────────────────────────────

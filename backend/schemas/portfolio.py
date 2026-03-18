@@ -29,3 +29,5 @@ class PortfolioResponse(BaseModel):
     total_return_pct: float
     initial_balance: float
     updated_at: datetime
+    live_trading: bool = False
+    data_source: str = "simulated"  # exchange | simulated

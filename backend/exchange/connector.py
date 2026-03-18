@@ -3,6 +3,8 @@
 Binance, Upbit, Bybit 등 다양한 거래소를 통일된 인터페이스로 제공
 """
 import asyncio
+import time
+import uuid
 from typing import Optional, Dict, List, Any
 from datetime import datetime
 import ccxt.async_support as ccxt
@@ -201,6 +203,163 @@ class ExchangeConnector:
             logger.error(f"주문 취소 오류: {e}")
             raise
 
+    async def fetch_open_orders(self, symbol: Optional[str] = None) -> List[Dict]:
+        """미체결 주문 목록"""
+        if self.paper_trading:
+            return []
+        try:
+            return await self._exchange.fetch_open_orders(symbol)
+        except Exception as e:
+            logger.error(f"미체결 주문 조회 오류: {e}")
+            raise
+
+    async def fetch_order_by_id(self, order_id: str, symbol: str) -> Dict:
+        """주문 단건 조회"""
+        if self.paper_trading:
+            return {"id": order_id, "symbol": symbol, "status": "unknown"}
+        return await self._exchange.fetch_order(order_id, symbol)
+
+    async def fetch_my_trades(
+        self, symbol: Optional[str] = None, limit: int = 50
+    ) -> List[Dict]:
+        """최근 체결 내역 (거래소)"""
+        if self.paper_trading:
+            return []
+        try:
+            return await self._exchange.fetch_my_trades(symbol, limit=limit)
+        except Exception as e:
+            logger.error(f"체결 내역 조회 오류: {e}")
+            raise
+
+    def get_market_constraints(self, symbol: str) -> Dict[str, Any]:
+        """최소 수량·명목가 등 (주문 UI용)"""
+        ex = self._exchange
+        if not ex:
+            return {}
+        try:
+            m = ex.market(symbol)
+        except Exception:
+            return {}
+        lim = m.get("limits") or {}
+        prec = m.get("precision") or {}
+        return {
+            "symbol": symbol,
+            "base": m.get("base"),
+            "quote": m.get("quote"),
+            "amount_min": (lim.get("amount") or {}).get("min"),
+            "amount_max": (lim.get("amount") or {}).get("max"),
+            "cost_min": (lim.get("cost") or {}).get("min"),
+            "price_min": (lim.get("price") or {}).get("min"),
+            "amount_precision": prec.get("amount"),
+            "price_precision": prec.get("price"),
+        }
+
+    async def create_orderbook_limit_order(
+        self,
+        symbol: str,
+        side: str,
+        amount: float,
+        aggressive: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        호가창 기준 지정가 주문 후 체결 대기.
+
+        - aggressive=False (기본 매매): 매수 → 최우선 매수호가(bid), 매도 → 최우선 매도호가(ask) — 유리한 쪽 대기
+        - aggressive=True (청산·긴급): 매수 → 매도호가(ask), 매도 → 매수호가(bid) — 상대 호가에 맞춰 빠른 체결
+        """
+        if self.paper_trading:
+            return await self._paper_orderbook_limit(symbol, side, amount, aggressive)
+
+        ex = self._exchange
+        ob = await self.fetch_order_book(symbol, limit=25)
+        if side == "buy":
+            if aggressive:
+                if not ob.get("asks"):
+                    raise ValueError(f"{symbol}: 매도호가 없음")
+                raw_p = float(ob["asks"][0][0])
+            else:
+                if not ob.get("bids"):
+                    raise ValueError(f"{symbol}: 매수호가 없음")
+                raw_p = float(ob["bids"][0][0])
+        else:
+            if aggressive:
+                if not ob.get("bids"):
+                    raise ValueError(f"{symbol}: 매수호가 없음")
+                raw_p = float(ob["bids"][0][0])
+            else:
+                if not ob.get("asks"):
+                    raise ValueError(f"{symbol}: 매도호가 없음")
+                raw_p = float(ob["asks"][0][0])
+
+        price = float(ex.price_to_precision(symbol, raw_p))
+        amt = float(ex.amount_to_precision(symbol, amount))
+        if amt <= 0:
+            raise ValueError(f"{symbol}: 주문 수량이 최소 단위 미만입니다.")
+
+        market = ex.market(symbol)
+        cost_min = (market.get("limits") or {}).get("cost") or {}
+        min_notional = float(cost_min.get("min") or 0)
+        if min_notional and amt * price < min_notional * 0.999:
+            raise ValueError(
+                f"{symbol}: 주문 금액이 최소 명목가({min_notional} USDT) 미만입니다."
+            )
+
+        order = await ex.create_limit_order(symbol, side, amt, price)
+        oid = str(order["id"])
+        max_wait = float(settings.ORDER_FILL_MAX_WAIT_SEC)
+        poll = float(settings.ORDER_FILL_POLL_INTERVAL_SEC)
+        deadline = time.monotonic() + max_wait
+        last: Dict[str, Any] = dict(order)
+
+        while time.monotonic() < deadline:
+            await asyncio.sleep(poll)
+            last = await ex.fetch_order(oid, symbol)
+            filled = float(last.get("filled") or 0)
+            st = (last.get("status") or "").lower()
+            if st in ("closed", "canceled", "cancelled"):
+                break
+            if filled >= amt * 0.999:
+                break
+
+        filled = float(last.get("filled") or 0)
+        st = (last.get("status") or "").lower()
+        if st == "open" and filled < amt * 0.999:
+            try:
+                await ex.cancel_order(oid, symbol)
+                last = await ex.fetch_order(oid, symbol)
+                filled = float(last.get("filled") or 0)
+            except Exception as e:
+                logger.warning(f"{symbol} 미체결 취소 중: {e}")
+
+        if filled <= 0:
+            raise ValueError(
+                f"{symbol} {side} 호가 지정가 미체결 또는 취소 (가격 {price}, 대기 {max_wait:.0f}s)"
+            )
+
+        avg = float(last.get("average") or 0) or price
+        fee = last.get("fee")
+        if not isinstance(fee, dict):
+            fee = {"cost": 0.0, "currency": symbol.split("/")[1]}
+        elif fee.get("cost") is None:
+            fee = {**fee, "cost": 0.0}
+
+        logger.info(
+            f"호가 지정가 체결: {side} {filled}/{amt} {symbol} @ ~{avg} ({'공격' if aggressive else '유리'})"
+        )
+        return {
+            "id": last.get("id", oid),
+            "symbol": symbol,
+            "side": side,
+            "type": "limit",
+            "amount": amt,
+            "filled": filled,
+            "price": avg,
+            "average": avg,
+            "cost": filled * avg,
+            "fee": fee if isinstance(fee, dict) else {"cost": 0.0},
+            "status": "closed",
+        }
+
     # ──────────────────────────────────────────────
     # 페이퍼트레이딩 시뮬레이션
     # ──────────────────────────────────────────────
@@ -228,7 +387,6 @@ class ExchangeConnector:
             self._paper_balance[base] = self._paper_balance.get(base, 0) - amount
             self._paper_balance["USDT"] = self._paper_balance.get("USDT", 0) + cost - fee
 
-        import uuid
         order = {
             "id": str(uuid.uuid4()),
             "symbol": symbol,
@@ -247,9 +405,44 @@ class ExchangeConnector:
         return order
 
     async def _paper_limit_order(self, symbol: str, side: str, amount: float, price: float) -> Dict:
-        """페이퍼트레이딩 지정가 주문 시뮬레이션 (즉시 체결 가정)"""
-        # 단순화: 지정가도 즉시 체결로 처리
-        return await self._paper_market_order(symbol, side, amount)
+        """페이퍼트레이딩 지정가: 지정가로 잔고 반영"""
+        base, quote = symbol.split("/")
+        cost = amount * price
+        fee = cost * 0.001
+        if side == "buy":
+            if self._paper_balance.get("USDT", 0) < cost + fee:
+                raise ValueError(f"잔고 부족: 필요={cost + fee:.2f} USDT")
+            self._paper_balance["USDT"] = self._paper_balance.get("USDT", 0) - cost - fee
+            self._paper_balance[base] = self._paper_balance.get(base, 0) + amount
+        else:
+            if self._paper_balance.get(base, 0) < amount:
+                raise ValueError(f"코인 부족: {base}")
+            self._paper_balance[base] = self._paper_balance.get(base, 0) - amount
+            self._paper_balance["USDT"] = self._paper_balance.get("USDT", 0) + cost - fee
+        oid = str(uuid.uuid4())
+        return {
+            "id": oid,
+            "symbol": symbol,
+            "side": side,
+            "type": "limit",
+            "amount": amount,
+            "filled": amount,
+            "price": price,
+            "average": price,
+            "cost": cost,
+            "fee": {"cost": fee, "currency": quote},
+            "status": "closed",
+        }
+
+    async def _paper_orderbook_limit(
+        self, symbol: str, side: str, amount: float, aggressive: bool
+    ) -> Dict:
+        ob = await self.fetch_order_book(symbol, limit=10)
+        if side == "buy":
+            raw = float(ob["asks" if aggressive else "bids"][0][0])
+        else:
+            raw = float(ob["bids" if aggressive else "asks"][0][0])
+        return await self._paper_limit_order(symbol, side, amount, raw)
 
     # ──────────────────────────────────────────────
     # 유틸리티

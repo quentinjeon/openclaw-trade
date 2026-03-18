@@ -435,4 +435,17 @@ STRATEGY_TEMPLATES = {
                        params_b={"k_period": 14, "d_period": 3}),
         ]),
     },
+    "larry_williams": {
+        "name": "Larry Williams %R",
+        "description": "Williams %R -80 돌파 매수, -20 이탈 매도 (거래량 1.15배 확인)",
+        "buy_group": _make_group("AND", [
+            _make_cond("WILLIAMS_R", "crosses_above", value_b=-80.0, params_a={"lbp": 14}),
+            _make_cond("VOLUME_RATIO", ">=", value_b=1.15, params_a={"period": 20}),
+        ]),
+        "sell_group": _make_group("OR", [
+            _make_cond("WILLIAMS_R", "crosses_below", value_b=-20.0, params_a={"lbp": 14}),
+            _make_cond("WILLIAMS_R", ">=", value_b=-8.0, params_a={"lbp": 14}),
+            _make_cond("PRICE_CHANGE", "<=", value_b=-2.5, params_a={"period": 1}),
+        ]),
+    },
 }

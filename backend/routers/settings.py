@@ -47,12 +47,45 @@ async def get_settings():
                 "description": strategy.description,
             })
 
+    from services.openai_budget import get_total_spent_usd
+
     return {
         "paper_trading": settings.PAPER_TRADING,
         "default_exchange": settings.DEFAULT_EXCHANGE,
         "default_symbols": settings.DEFAULT_SYMBOLS,
         "risk": risk_config,
         "strategies": strategies_config,
+        "fees": {
+            "taker_pct_per_side": settings.TAKER_FEE_PCT_PER_SIDE,
+            "round_trip_fee_pct_approx": settings.ROUND_TRIP_FEE_PCT_APPROX,
+            "note": "익절 목표는 왕복 수수료·슬리피지보다 크게 잡는 것이 유리합니다.",
+        },
+        "openai_budget": {
+            "spent_usd": round(get_total_spent_usd(), 4),
+            "cap_usd": settings.OPENAI_MAX_SPEND_USD,
+            "remaining_usd": round(
+                max(0.0, settings.OPENAI_MAX_SPEND_USD - get_total_spent_usd()), 4
+            ),
+            "llm_enabled": settings.OPENAI_LLM_ENABLED,
+        },
+        "manual_order_approval": __import__("main").order_approval_manual,
+    }
+
+
+class OrderApprovalModeBody(BaseModel):
+    enabled: bool
+
+
+@router.put("/order-approval")
+async def put_order_approval(body: OrderApprovalModeBody):
+    """수동 주문 승인 ON/OFF (즉시 반영, 재시작 불필요)"""
+    import main as m
+
+    m.order_approval_manual = body.enabled
+    return {
+        "success": True,
+        "manual_order_approval": m.order_approval_manual,
+        "message": "수동 승인 ON" if body.enabled else "즉시 체결 모드(자동)",
     }
 
 

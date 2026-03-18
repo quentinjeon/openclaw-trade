@@ -54,7 +54,7 @@ export default function WalletPage() {
             Binance 계좌 잔액 현황
             {data && (
               <span className="ml-2 text-slate-600">
-                마지막 업데이트: {formatDateTime(data.updated_at)}
+                마지막 업데이트: {formatDateTime(data.updated_at)} (한국시간)
               </span>
             )}
           </p>

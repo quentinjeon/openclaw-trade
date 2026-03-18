@@ -5,13 +5,16 @@
  */
 import { useEffect } from 'react'
 import useSWR from 'swr'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { Activity, AlertTriangle, RefreshCw } from 'lucide-react'
 
 import { PortfolioSummary } from '@/components/dashboard/PortfolioSummary'
 import { PositionTable } from '@/components/dashboard/PositionTable'
 import { AgentStatusPanel } from '@/components/agents/AgentStatusPanel'
 import { AgentLogStream } from '@/components/agents/AgentLogStream'
 import { TradeHistoryTable } from '@/components/trading/TradeHistoryTable'
+import { PendingOrderApproval } from '@/components/dashboard/PendingOrderApproval'
+import { PipelineOpportunityCards } from '@/components/dashboard/PipelineOpportunityCards'
+import { TradingScorePanel } from '@/components/dashboard/TradingScorePanel'
 
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { usePortfolioStore } from '@/stores/portfolioStore'
@@ -112,15 +115,36 @@ export default function DashboardPage() {
           <p className="text-sm text-slate-400 mt-1">OpenClaw 암호화폐 자동매매 시스템</p>
         </div>
 
-        {/* 페이퍼트레이딩 배너 */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/30 rounded-lg">
-          <AlertTriangle size={16} className="text-purple-400" />
-          <span className="text-sm text-purple-300 font-medium">페이퍼트레이딩 모드</span>
-        </div>
+        {portfolio?.live_trading ? (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/35 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Activity size={16} className="text-emerald-400 shrink-0" />
+              <span className="text-sm text-emerald-200 font-semibold">실거래 · 거래소 잔고 동기화</span>
+            </div>
+            <span className="text-xs text-slate-400 sm:border-l sm:border-slate-600 sm:pl-3">
+              현금(스테이블) {portfolio.cash_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })} USDT 상당 · 총자산{' '}
+              {portfolio.total_value_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <AlertTriangle size={16} className="text-amber-400" />
+            <span className="text-sm text-amber-200">시뮬레이션(페이퍼) — .env 에 PAPER_TRADING=true</span>
+          </div>
+        )}
       </div>
 
       {/* 포트폴리오 요약 */}
       <PortfolioSummary portfolio={portfolio} isLoading={isLoading} />
+
+      {/* 매수·매도·보유 점수 & 자금 비중 */}
+      <TradingScorePanel liveTrading={portfolio?.live_trading ?? false} />
+
+      {/* 수동 주문 승인 */}
+      <PendingOrderApproval />
+
+      {/* 백테스트 기반 단기 파이프라인 (조건 맞을 때만 표시) */}
+      <PipelineOpportunityCards />
 
       {/* 에이전트 상태 + 보유 포지션 */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

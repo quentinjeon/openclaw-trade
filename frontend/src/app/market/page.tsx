@@ -17,6 +17,7 @@ import {
 import { fetcher, marketApi } from '@/services/api'
 import { formatUSD, formatKRW, nowKST } from '@/lib/utils'
 import type { WatchlistItem, Candle, TickerInfo, FxRateResponse } from '@/types/market'
+import { WATCHLIST_SYMBOLS } from '@/constants/symbols'
 
 // SSR 비활성화 (lightweight-charts는 브라우저 전용)
 const CandleChart = dynamic(() => import('@/components/market/CandleChart'), { ssr: false })
@@ -32,7 +33,7 @@ const TIMEFRAMES: { label: string; value: Timeframe }[] = [
   { label: '일', value: '1d' },
 ]
 
-const SYMBOLS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT']
+const SYMBOLS = [...WATCHLIST_SYMBOLS]
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8002'
 
 // ── 서브 컴포넌트: 가격 변동률 뱃지 ───────────────────

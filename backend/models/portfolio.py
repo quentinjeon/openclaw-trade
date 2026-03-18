@@ -20,6 +20,10 @@ class PortfolioSnapshot(Base):
     pnl_total: Mapped[float] = mapped_column(Float, default=0.0)             # 총 손익
     win_rate: Mapped[float] = mapped_column(Float, default=0.0)              # 승률 (%)
     total_trades: Mapped[int] = mapped_column(Integer, default=0)
+    winning_trades: Mapped[int] = mapped_column(Integer, default=0)
+    losing_trades: Mapped[int] = mapped_column(Integer, default=0)
+    initial_balance: Mapped[float] = mapped_column(Float, default=0.0)
+    total_return_pct: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
     def __repr__(self) -> str:

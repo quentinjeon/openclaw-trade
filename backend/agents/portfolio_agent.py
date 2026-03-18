@@ -5,7 +5,7 @@ PortfolioAgent - 포트폴리오 성과 추적 에이전트
 import json
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from loguru import logger
 
@@ -13,6 +13,7 @@ from agents.base_agent import BaseAgent
 from agents.execution_agent import TradeResult
 from exchange.connector import ExchangeConnector
 from core.config import settings
+from core.stable_coins import STABLE_COINS
 
 
 @dataclass
@@ -42,7 +43,7 @@ class PortfolioState:
             return 0.0
         return (self.total_value_usd - self.initial_balance) / self.initial_balance * 100
 
-    def to_dict(self) -> dict:
+    def to_dict(self, *, live_trading: bool = False) -> dict:
         return {
             "total_value_usd": round(self.total_value_usd, 2),
             "cash_usd": round(self.cash_usd, 2),
@@ -56,6 +57,8 @@ class PortfolioState:
             "total_return_pct": round(self.total_return_pct, 2),
             "initial_balance": round(self.initial_balance, 2),
             "updated_at": self.updated_at.isoformat(),
+            "live_trading": live_trading,
+            "data_source": "exchange" if live_trading else "simulated",
         }
 
 
@@ -82,24 +85,33 @@ class PortfolioAgent(BaseAgent):
         self.exchange = exchange
         self.on_update = on_update
 
-        # 초기 잔고 설정
-        _initial = initial_balance or settings.PAPER_TRADING_BALANCE
-        self.portfolio = PortfolioState(
-            total_value_usd=_initial,
-            cash_usd=_initial,
-            initial_balance=_initial,
-        )
+        if settings.PAPER_TRADING:
+            _initial = initial_balance or settings.PAPER_TRADING_BALANCE
+            self.portfolio = PortfolioState(
+                total_value_usd=_initial,
+                cash_usd=_initial,
+                initial_balance=_initial,
+            )
+        else:
+            self.portfolio = PortfolioState()
 
-        # DB 저장 콜백
         self._db_save_callback = None
+        self._execution_agent_ref: Optional[Any] = None
 
     def set_db_callback(self, callback):
         """DB 저장 콜백 설정"""
         self._db_save_callback = callback
 
+    def attach_execution_agent(self, agent: Optional[Any]) -> None:
+        """실거래 시 봇 포지션(진입가·SL/TP) 병합용"""
+        self._execution_agent_ref = agent
+
     async def run_cycle(self):
-        """포트폴리오 상태 업데이트"""
-        await self._update_portfolio()
+        """포트폴리오 상태 업데이트 (실거래: 거래소 잔고 동기화)"""
+        if self.exchange.paper_trading:
+            await self._update_portfolio()
+        else:
+            await self._sync_live_from_exchange()
 
         # DB 스냅샷 저장
         if self._db_save_callback:
@@ -116,47 +128,57 @@ class PortfolioAgent(BaseAgent):
         """거래 체결 결과 처리"""
         self.portfolio.total_trades += 1
 
-        if result.status == "filled":
-            if result.approved_order.side == "buy":
-                # 매수: 현금 감소
-                self.portfolio.cash_usd -= result.cost + result.fee
-                self.portfolio.positions[result.approved_order.symbol] = {
-                    "symbol": result.approved_order.symbol,
-                    "amount": result.filled_amount,
-                    "entry_price": result.filled_price,
-                    "current_price": result.filled_price,
-                    "unrealized_pnl": 0.0,
-                    "stop_loss": result.approved_order.stop_loss,
-                    "take_profit": result.approved_order.take_profit,
-                }
-
-            elif result.approved_order.side == "sell":
-                symbol = result.approved_order.symbol
-                # 매도: 현금 증가 + PnL 계산
-                self.portfolio.cash_usd += result.cost - result.fee
-
-                if symbol in self.portfolio.positions:
-                    entry_price = self.portfolio.positions[symbol]["entry_price"]
-                    amount = self.portfolio.positions[symbol]["amount"]
-                    pnl = (result.filled_price - entry_price) * amount - result.fee
-
+        if self.exchange.paper_trading:
+            if result.status == "filled":
+                if result.approved_order.side == "buy":
+                    self.portfolio.cash_usd -= result.cost + result.fee
+                    self.portfolio.positions[result.approved_order.symbol] = {
+                        "symbol": result.approved_order.symbol,
+                        "amount": result.filled_amount,
+                        "entry_price": result.filled_price,
+                        "current_price": result.filled_price,
+                        "unrealized_pnl": 0.0,
+                        "stop_loss": result.approved_order.stop_loss,
+                        "take_profit": result.approved_order.take_profit,
+                    }
+                elif result.approved_order.side == "sell":
+                    symbol = result.approved_order.symbol
+                    self.portfolio.cash_usd += result.cost - result.fee
+                    if symbol in self.portfolio.positions:
+                        entry_price = self.portfolio.positions[symbol]["entry_price"]
+                        amount = self.portfolio.positions[symbol]["amount"]
+                        pnl = (result.filled_price - entry_price) * amount - result.fee
+                        self.portfolio.pnl_total += pnl
+                        self.portfolio.pnl_today += pnl
+                        if pnl >= 0:
+                            self.portfolio.winning_trades += 1
+                        else:
+                            self.portfolio.losing_trades += 1
+                        del self.portfolio.positions[symbol]
+                        await self._log(
+                            "INFO",
+                            f"거래 완료: {symbol} PnL={pnl:+.2f} USD (총 PnL={self.portfolio.pnl_total:+.2f})",
+                        )
+            await self._update_portfolio()
+        else:
+            if result.status == "filled" and result.approved_order.side == "sell":
+                pnl = result.realized_pnl
+                if pnl is not None:
                     self.portfolio.pnl_total += pnl
                     self.portfolio.pnl_today += pnl
-
                     if pnl >= 0:
                         self.portfolio.winning_trades += 1
                     else:
                         self.portfolio.losing_trades += 1
-
-                    del self.portfolio.positions[symbol]
-
                     await self._log(
                         "INFO",
-                        f"거래 완료: {symbol} PnL={pnl:+.2f} USD (총 PnL={self.portfolio.pnl_total:+.2f})",
+                        f"[실거래] {result.approved_order.symbol} 매도 실현 PnL={pnl:+.2f} USD",
                     )
+            try:
+                await self._sync_live_from_exchange()
+            except Exception as e:
+                await self._log("ERROR", f"거래소 동기화 실패: {e}")
 
-        # 즉시 업데이트
-        await self._update_portfolio()
         if self.on_update:
             await self.on_update(self.portfolio)
 
@@ -189,6 +211,79 @@ class PortfolioAgent(BaseAgent):
         except Exception as e:
             await self._log("ERROR", f"포트폴리오 업데이트 오류: {e}")
 
+    async def _sync_live_from_exchange(self) -> None:
+        """
+        Binance 현물 잔고 기준으로 총자산·현금·보유 코인 반영.
+        봇이 연 `active_positions`가 있으면 진입가·SL/TP 병합.
+        """
+        raw = await self.exchange.fetch_balance()
+        total = raw.get("total") or {}
+        exec_agent = self._execution_agent_ref
+        active = getattr(exec_agent, "active_positions", {}) if exec_agent else {}
+
+        cash_usd = 0.0
+        for c in STABLE_COINS:
+            cash_usd += float(total.get(c) or 0)
+
+        positions: Dict[str, dict] = {}
+        for currency, amt_s in total.items():
+            amt = float(amt_s or 0)
+            if amt < 1e-12:
+                continue
+            if currency in STABLE_COINS:
+                continue
+            sym = f"{currency}/USDT"
+            try:
+                ticker = await self.exchange.fetch_ticker(sym)
+                price = float(ticker.get("last") or ticker.get("close") or 0)
+            except Exception as ex:
+                logger.warning(f"라이브 동기화 티커 실패 {sym}: {ex}")
+                continue
+            if price <= 0 or amt * price < 0.5:
+                continue
+
+            bot = active.get(sym)
+            if bot and abs(amt - float(bot.get("amount") or 0)) < max(1e-8, amt * 1e-6):
+                entry = float(bot["entry_price"])
+                amount = amt
+                sl, tp = bot.get("stop_loss"), bot.get("take_profit")
+                managed = True
+            elif bot and amt > float(bot.get("amount") or 0):
+                ba = float(bot["amount"])
+                ep = float(bot["entry_price"])
+                extra = amt - ba
+                entry = (ba * ep + extra * price) / amt if amt > 0 else price
+                amount = amt
+                sl, tp = bot.get("stop_loss"), bot.get("take_profit")
+                managed = True
+            else:
+                entry = price
+                amount = amt
+                sl, tp = None, None
+                managed = False
+
+            unrealized = (price - entry) * amount
+            positions[sym] = {
+                "symbol": sym,
+                "amount": round(amount, 10),
+                "entry_price": round(entry, 8),
+                "current_price": round(price, 8),
+                "unrealized_pnl": round(unrealized, 2),
+                "stop_loss": sl,
+                "take_profit": tp,
+                "managed_by_bot": managed,
+            }
+
+        pos_val = sum(p["amount"] * p["current_price"] for p in positions.values())
+        self.portfolio.cash_usd = cash_usd
+        self.portfolio.positions = positions
+        self.portfolio.total_value_usd = cash_usd + pos_val
+        if self.portfolio.initial_balance <= 0 and self.portfolio.total_value_usd > 0:
+            self.portfolio.initial_balance = self.portfolio.total_value_usd
+        self.portfolio.updated_at = datetime.utcnow()
+
     def get_summary(self) -> dict:
         """포트폴리오 요약 정보"""
-        return self.portfolio.to_dict()
+        return self.portfolio.to_dict(
+            live_trading=not self.exchange.paper_trading
+        )

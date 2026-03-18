@@ -17,11 +17,14 @@ class TradeResponse(BaseModel):
     fee: float
     status: str
     is_paper: bool
+    agent_id: Optional[str] = None
     strategy: Optional[str] = None
     stop_loss: Optional[float] = None
     take_profit: Optional[float] = None
+    close_price: Optional[float] = None
     pnl: Optional[float] = None
     created_at: datetime
+    updated_at: datetime
 
 
 class TradeListResponse(BaseModel):

@@ -40,10 +40,11 @@ backend/
 │   ├── rsi_strategy.py    # RSI 전략
 │   ├── macd_strategy.py   # MACD 전략
 │   └── bollinger_strategy.py
-├── models/                # SQLAlchemy 모델
+├── models/                # SQLAlchemy 모델 (상세: `.cursor/rules/db.mdc`)
 │   ├── trade.py
 │   ├── agent_log.py
-│   └── portfolio.py
+│   ├── portfolio.py
+│   └── system_condition.py
 ├── routers/               # FastAPI 라우터
 │   ├── portfolio.py
 │   ├── trades.py

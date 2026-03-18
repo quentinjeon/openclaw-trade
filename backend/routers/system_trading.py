@@ -83,6 +83,7 @@ class ConditionResponse(BaseModel):
     backtest_total_trades: Optional[int]
     backtest_avg_return: Optional[float]
     backtest_max_drawdown: Optional[float]
+    backtest_ran_at: Optional[str] = None
 
 
 class TextToRuleRequest(BaseModel):
@@ -133,6 +134,7 @@ def _condition_to_response(c: SystemCondition) -> ConditionResponse:
         backtest_total_trades=c.backtest_total_trades,
         backtest_avg_return=c.backtest_avg_return,
         backtest_max_drawdown=c.backtest_max_drawdown,
+        backtest_ran_at=c.backtest_ran_at.isoformat() if c.backtest_ran_at else None,
     )
 
 

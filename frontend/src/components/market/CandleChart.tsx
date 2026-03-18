@@ -17,6 +17,13 @@ import {
   HistogramSeries,
   createSeriesMarkers,
 } from 'lightweight-charts'
+import type { Time } from 'lightweight-charts'
+import { formatUnixSecondsKST } from '@/lib/utils'
+
+function kstChartTimeFormatter(time: Time): string {
+  if (typeof time === 'number') return formatUnixSecondsKST(time)
+  return `${time.year}.${String(time.month).padStart(2, '0')}.${String(time.day).padStart(2, '0')}`
+}
 
 export interface OHLCVCandle {
   time: number
@@ -106,6 +113,10 @@ export default function CandleChart({
         timeVisible: true,
         secondsVisible: false,
       },
+      localization: {
+        locale: 'ko-KR',
+        timeFormatter: kstChartTimeFormatter,
+      },
       width: mainEl.clientWidth,
       height: CHART_HEIGHT,
     })
@@ -177,6 +188,10 @@ export default function CandleChart({
         borderColor: '#1e293b',
         timeVisible: true,
         secondsVisible: false,
+      },
+      localization: {
+        locale: 'ko-KR',
+        timeFormatter: kstChartTimeFormatter,
       },
       width: volEl.clientWidth,
       height: VOL_HEIGHT,

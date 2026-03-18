@@ -22,9 +22,8 @@
         ↓ on_approve 콜백
 [ExecutionAgent]
   - 파일: agents/execution_agent.py
-  - 주기: ApprovedOrder 수신 시 즉시 + 10초마다 손절/익절 체크
-  - 출력: TradeResult
-        ↓ on_trade_result 콜백
+  - 주기: ApprovedOrder 수신 시 즉시 + 10초마다 손절/익절 + 약 60초마다 보유 심볼 Williams %R 매도 스캔
+  - 출력: TradeResult → `main._combined_trade_handler`: Portfolio 갱신 + **`trades` DB INSERT** (`services/trade_persistence.py`) + WS
 [PortfolioAgent]
   - 파일: agents/portfolio_agent.py
   - 주기: 60초 + TradeResult 수신 시
@@ -100,6 +99,9 @@ class MarketSignal:
 
 ---
 
+### 매수·매도·보유 점수 (`services/score_trading.py`)
+- 심볼별 점수 → 전략과 병합 매매·리스크 매수 비중(`_score_alloc_mult`). API·대시보드 `/api/trading-scores/`.
+
 ### StrategyAgent (`agents/strategy_agent.py`)
 
 **역할**: 매매 전략 실행 및 신호 생성
@@ -153,9 +155,14 @@ RiskManagerAgent(
 4. 일일 손실 한도 미초과
 5. 잔고 ≥ $10
 
-**포지션 크기 계산**:
-- 기본: `max_position_size_pct × confidence_multiplier`
-- `confidence_multiplier`: 신뢰도 0.5~1.0 → 0.3~1.0 배율
+**포지션 크기 계산 (매수)**:
+- 실거래: `main`에서 `set_connector(exchange)` 등록 후 **`fetch_balance` 해당 쿼트(USDT 등) free** 기준으로 비중 산출 (포트폴리오 추정과 달라도 **실제 주문 가능액**만 사용)
+- 가용 명목가 = `free_quote × (1 - CASH_FEE_RESERVE_PCT)` (`env.example` 참고)
+- 거래소 `limits.cost.min`(없으면 `ORDER_MIN_NOTIONAL_FALLBACK_USD`) 이하로 떨어지면 **최소 명목가까지 올리거나**, 가용으로 불가 시 **거부** + 로그
+- 수량은 `amount_to_precision` 반영 후에도 최소 명목·가용 초과를 재검증
+- 페이퍼: 전달받은 잔고(가상) 기준 단순 비중
+
+**포지션 크기 (매도)**: 추적 포지션 전량
 
 **출력 (`ApprovedOrder`)**:
 ```python
@@ -184,6 +191,7 @@ ExecutionAgent(
     exchange: ExchangeConnector,
     on_trade_result: Callable,       # TradeResult 콜백
     on_position_update: Callable,    # 포지션 업데이트 콜백
+    on_strategy_exit: Optional[Callable],  # 보유 청산용 TradingSignal → RiskManager (main에서 연결)
 )
 ```
 
@@ -191,6 +199,7 @@ ExecutionAgent(
 - `execute_order(order)`: 주문 실행
 - `close_all_positions()`: 전체 청산 (긴급)
 - `_check_stop_loss_take_profit()`: 10초마다 체크 (run_cycle)
+- `_scan_strategy_exit_signals()`: 보유 심볼만 1h OHLCV로 Larry Williams SELL 시 리스크·즉시 매도
 
 **주문 흐름**:
 ```
@@ -246,6 +255,12 @@ class PortfolioState:
 - **신호**: 하단 밴드 이탈 → BUY, 상단 밴드 이탈 → SELL
 - **기본 파라미터**: period=20, std_dev=2.0
 
+### LarryWilliamsStrategy (`strategies/williams_strategy.py`) — 기본 활성
+- **신호**: Williams %R이 **-80 선 상향 돌파** → BUY (과매도 탈출), **-20 선 하향 이탈** → SELL
+- **보조**: 극단 과매수(-5 부근)에서 급락 전환 시 SELL
+- **파라미터**: lbp=14, oversold_line=-80, overbought_line=-20, 거래량 비율 ≥1.1 시 매수 신뢰도 가산
+- 시스템 트레이딩 템플릿 `larry_williams`, 지표 `WILLIAMS_R` (condition_evaluator)
+
 ---
 
 ## API 라우터
@@ -256,6 +271,12 @@ class PortfolioState:
 | trades | routers/trades.py | /api/trades |
 | agents | routers/agents.py | /api/agents |
 | settings | routers/settings.py | /api/settings |
+| picks | routers/picks.py | /api/picks (스캔·자동매수 설정) |
+
+## Pick Scanner (백테스트 스코어링·자동매수)
+- **역할**: 템플릿(또는 `condition_id` 조건식)으로 심볼별 백테스트 → 0~100 점수. 임계값 이상이면 `TradingSignal(strategy_name=pick_scanner)` → RiskManager → Execution.
+- **모듈**: `services/pick_scanner.py`, `pick_scanner_config.py`, `pick_auto_buy.py`
+- **설정 파일**: `backend/data/pick_scanner_config.json`
 
 ## WebSocket 채널
 
@@ -268,5 +289,5 @@ class PortfolioState:
 
 ---
 
-*최종 업데이트: 2026-03-08*  
-*버전: 1.0.0*
+*최종 업데이트: 2026-03-18*  
+*버전: 1.1.0*

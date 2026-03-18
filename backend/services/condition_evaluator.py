@@ -13,7 +13,7 @@
 지원 지표:
   가격: CLOSE, OPEN, HIGH, LOW, VOLUME
   이동평균: MA(SMA), EMA, VWMA
-  오실레이터: RSI, STOCH_K, STOCH_D, CCI
+  오실레이터: RSI, STOCH_K, STOCH_D, CCI, WILLIAMS_R (Larry Williams %R)
   추세: MACD, MACD_SIGNAL, MACD_HIST, ADX
   변동성: BB_UPPER, BB_MIDDLE, BB_LOWER, BB_WIDTH, ATR
   파생: VOLUME_RATIO, PRICE_CHANGE, CANDLE_BODY
@@ -42,7 +42,7 @@ SUPPORTED_INDICATORS = {
     # 이동평균
     "MA", "EMA", "VWMA",
     # 오실레이터
-    "RSI", "STOCH_K", "STOCH_D", "CCI",
+    "RSI", "STOCH_K", "STOCH_D", "CCI", "WILLIAMS_R",
     # 추세
     "MACD", "MACD_SIGNAL", "MACD_HIST", "ADX",
     # 변동성
@@ -115,6 +115,14 @@ def _compute_indicator(df: pd.DataFrame, name: str, params: dict) -> pd.Series:
 
     if name == "CCI":
         return ta.trend.CCIIndicator(df["high"], df["low"], df["close"], window=period).cci()
+
+    if name == "WILLIAMS_R":
+        lbp = int(params.get("lbp", params.get("period", 14)))
+        hh = df["high"].rolling(lbp).max()
+        ll = df["low"].rolling(lbp).min()
+        den = (hh - ll).replace(0, np.nan)
+        wr = (hh - df["close"]) / den * -100
+        return wr.fillna(-50.0)
 
     # ── 추세/MACD
     if name in ("MACD", "MACD_SIGNAL", "MACD_HIST"):

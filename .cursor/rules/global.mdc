@@ -61,6 +61,10 @@ openclaw/
 - 에러는 반드시 로깅 후 적절히 처리
 - 사용자에게 의미있는 에러 메시지 제공
 
+### DB 스키마 동기화
+- 테이블/컬럼 추가·변경 시 **`backend/models/*.py`** 와 **`.cursor/rules/db.mdc`** 를 함께 갱신
+- 상세 스키마·규칙: `.cursor/rules/db.mdc`
+
 ### agents.md 동기화
 - 새 에이전트 추가 시 해당 폴더의 `agents.md` 업데이트
 - 에이전트 인터페이스 변경 시 `agents.md` 반드시 반영

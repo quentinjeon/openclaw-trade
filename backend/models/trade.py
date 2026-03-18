@@ -22,7 +22,8 @@ class Trade(Base):
     price: Mapped[float] = mapped_column(Float, nullable=False)
     cost: Mapped[float] = mapped_column(Float, nullable=False)                         # amount * price
     fee: Mapped[float] = mapped_column(Float, default=0.0)
-    status: Mapped[str] = mapped_column(String(10), nullable=False, default="open")   # open | closed | cancelled
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="open")
+    # open | closed | cancelled | filled | failed
     is_paper: Mapped[bool] = mapped_column(default=True)                              # 페이퍼트레이딩 여부
     agent_id: Mapped[str] = mapped_column(String(50), nullable=True)                  # 실행 에이전트
     strategy: Mapped[str] = mapped_column(String(50), nullable=True)                  # 사용 전략

@@ -16,9 +16,10 @@ export function PositionTable({ positions }: PositionTableProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex flex-wrap items-center gap-2">
           <span>보유 포지션</span>
           <span className="text-sm font-normal text-slate-400">({positionList.length}개)</span>
+          <span className="text-[10px] font-normal text-slate-500">거래소 현물 잔고 기준</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -38,6 +39,7 @@ export function PositionTable({ positions }: PositionTableProps) {
                   <th className="text-right pb-3 text-slate-400 font-medium">미실현 손익</th>
                   <th className="text-right pb-3 text-slate-400 font-medium">손절가</th>
                   <th className="text-right pb-3 text-slate-400 font-medium">익절가</th>
+                  <th className="text-center pb-3 text-slate-400 font-medium">추적</th>
                 </tr>
               </thead>
               <tbody>
@@ -79,6 +81,13 @@ export function PositionTable({ positions }: PositionTableProps) {
                       </td>
                       <td className="text-right py-3 text-green-400/80">
                         {position.take_profit ? formatUSD(position.take_profit) : '-'}
+                      </td>
+                      <td className="text-center py-3">
+                        {position.managed_by_bot ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">봇</span>
+                        ) : (
+                          <span className="text-slate-600 text-xs">-</span>
+                        )}
                       </td>
                     </tr>
                   )

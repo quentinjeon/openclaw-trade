@@ -18,6 +18,7 @@ declare -A PAGES=(
   ["frontend/src/app/agents"]="agents:/agents"
   ["frontend/src/app/trades"]="trades:/trades"
   ["frontend/src/app/settings"]="settings:/settings"
+  ["frontend/src/app/picks"]="picks:/picks"
   ["frontend/src/components/dashboard"]="dashboard:/"
   ["frontend/src/components/market"]="market:/market"
   ["frontend/src/components/portfolio"]="portfolio:/portfolio"

@@ -14,13 +14,17 @@ import {
   Zap,
   Wallet,
   BotMessageSquare,
+  Sparkles,
 } from 'lucide-react'
+import useSWR from 'swr'
 import { cn } from '@/lib/utils'
+import { fetcher } from '@/services/api'
 
 const navItems = [
   { href: '/', icon: LayoutDashboard, label: '대시보드' },
   { href: '/market', icon: LineChart, label: '시황 분석' },
   { href: '/system-trading', icon: BotMessageSquare, label: '시스템 트레이딩' },
+  { href: '/picks', icon: Sparkles, label: '종목 스캔' },
   { href: '/portfolio', icon: BarChart2, label: '포트폴리오' },
   { href: '/wallet', icon: Wallet, label: '내 지갑' },
   { href: '/agents', icon: Activity, label: '에이전트' },
@@ -30,6 +34,12 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { data: settings } = useSWR<{ paper_trading?: boolean }>(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/settings/`,
+    fetcher,
+    { refreshInterval: 60000 },
+  )
+  const live = settings?.paper_trading === false
 
   return (
     <aside className="w-64 bg-slate-900 border-r border-slate-700 flex flex-col">
@@ -73,7 +83,11 @@ export function Sidebar() {
         <div className="flex items-center gap-2 px-3 py-2 bg-slate-800 rounded-lg">
           <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
           <span className="text-xs text-slate-400">시스템 운영 중</span>
-          <span className="ml-auto text-xs text-purple-400 font-medium">PAPER</span>
+          <span
+            className={`ml-auto text-xs font-medium ${live ? 'text-emerald-400' : 'text-amber-400'}`}
+          >
+            {live ? 'LIVE' : 'PAPER'}
+          </span>
         </div>
       </div>
     </aside>

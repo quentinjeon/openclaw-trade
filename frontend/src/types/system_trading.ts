@@ -1,6 +1,7 @@
 /**
  * 시스템 트레이딩 타입 정의
  */
+import { WATCHLIST_SYMBOLS } from '@/constants/symbols'
 
 // ── 조건 노드 ──────────────────────────────────────
 export interface ConditionNode {
@@ -39,6 +40,8 @@ export interface SystemCondition {
   backtest_total_trades?: number
   backtest_avg_return?: number
   backtest_max_drawdown?: number
+  /** 백테스트 마지막 실행 시각 (ISO) */
+  backtest_ran_at?: string | null
 }
 
 export interface ConditionCreate {
@@ -109,6 +112,11 @@ export const INDICATOR_OPTIONS = [
   { value: 'EMA', label: '지수이동평균 (EMA)', params: [{ key: 'period', label: '기간', default: 20 }] },
   // 오실레이터
   { value: 'RSI', label: 'RSI', params: [{ key: 'period', label: '기간', default: 14 }] },
+  {
+    value: 'WILLIAMS_R',
+    label: 'Williams %R (Larry Williams)',
+    params: [{ key: 'lbp', label: '기간(LBP)', default: 14 }],
+  },
   { value: 'STOCH_K', label: '스토캐스틱 %K', params: [{ key: 'k_period', label: 'K기간', default: 14 }, { key: 'd_period', label: 'D기간', default: 3 }] },
   { value: 'STOCH_D', label: '스토캐스틱 %D', params: [{ key: 'k_period', label: 'K기간', default: 14 }, { key: 'd_period', label: 'D기간', default: 3 }] },
   // 추세
@@ -144,7 +152,4 @@ export const TIMEFRAME_OPTIONS = [
   { value: '1d', label: '일봉' },
 ]
 
-export const SYMBOL_OPTIONS = [
-  'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT',
-  'ADA/USDT', 'DOGE/USDT', 'MATIC/USDT', 'DOT/USDT', 'LINK/USDT',
-]
+export const SYMBOL_OPTIONS = [...WATCHLIST_SYMBOLS]

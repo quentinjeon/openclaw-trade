@@ -58,7 +58,9 @@ export function PortfolioSummary({ portfolio, isLoading }: PortfolioSummaryProps
     {
       title: '총 자산',
       value: formatUSD(portfolio.total_value_usd),
-      subtitle: `초기 ${formatUSD(portfolio.initial_balance)}`,
+      subtitle: portfolio.live_trading
+        ? `현금 ${formatUSD(portfolio.cash_usd)} · 거래소 동기화`
+        : `초기 ${formatUSD(portfolio.initial_balance)}`,
       icon: <Wallet size={18} />,
       valueColor: 'text-slate-100',
     },

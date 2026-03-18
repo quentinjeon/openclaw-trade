@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 from loguru import logger
 import httpx
 
+from core.symbol_lists import WATCHLIST_SYMBOLS
+
 router = APIRouter(prefix="/api/market", tags=["market"])
 
 
@@ -79,7 +81,7 @@ async def get_market_overview():
     if exchange is None or not exchange.is_connected:
         raise HTTPException(status_code=503, detail="거래소 연결이 초기화되지 않았습니다.")
 
-    symbols = ["BTC/USDT", "ETH/USDT"]
+    symbols = WATCHLIST_SYMBOLS[:8]
     tickers: List[TickerInfo] = []
 
     for symbol in symbols:
@@ -233,8 +235,6 @@ async def get_candles(
 # ──────────────────────────────────────────────
 # 워치리스트 엔드포인트
 # ──────────────────────────────────────────────
-
-WATCHLIST_SYMBOLS = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT"]
 
 @router.get("/watchlist", response_model=WatchlistResponse)
 async def get_watchlist():

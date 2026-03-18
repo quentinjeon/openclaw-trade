@@ -26,6 +26,7 @@ import type {
 } from '@/types/system_trading'
 import { SYMBOL_OPTIONS, TIMEFRAME_OPTIONS } from '@/types/system_trading'
 import type { ChartMarker } from '@/components/market/CandleChart'
+import { formatDateTime } from '@/lib/utils'
 import { ConditionBuilder } from '@/components/system-trading/ConditionBuilder'
 import { BacktestResultPanel } from '@/components/system-trading/BacktestResultPanel'
 
@@ -368,6 +369,7 @@ export default function SystemTradingPage() {
                       {cond.backtest_win_rate !== undefined && cond.backtest_win_rate !== null && (
                         <p className="text-[10px] text-slate-600">
                           승률 {cond.backtest_win_rate}% • {cond.backtest_total_trades}건
+                          {cond.backtest_ran_at ? ` • ${formatDateTime(cond.backtest_ran_at)}` : ''}
                         </p>
                       )}
                     </div>

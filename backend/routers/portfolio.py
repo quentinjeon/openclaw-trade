@@ -24,7 +24,9 @@ async def get_portfolio():
             "losing_trades": 0,
             "win_rate": 0.0,
             "total_return_pct": 0.0,
-            "initial_balance": 10000.0,
+            "initial_balance": 0.0,
             "updated_at": "2026-01-01T00:00:00",
+            "live_trading": False,
+            "data_source": "simulated",
         }
-    return portfolio_agent.portfolio.to_dict()
+    return portfolio_agent.get_summary()

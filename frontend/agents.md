@@ -19,6 +19,7 @@ src/
 │   ├── page.tsx                 # 대시보드 (메인)
 │   ├── market/page.tsx          # 시황 분석 (캔들차트 고도화 - 3패널 레이아웃)
 │   ├── system-trading/page.tsx  # 시스템 트레이딩 (조건식 + 백테스트)
+│   ├── picks/page.tsx           # 종목 스캔 (백테스트 점수 + 자동매수 설정)
 │   ├── portfolio/page.tsx       # 포트폴리오 상세
 │   ├── wallet/page.tsx          # 내 지갑 (Binance 계좌 잔액)
 │   ├── agents/page.tsx          # 에이전트 모니터링
@@ -59,7 +60,7 @@ src/
 │   └── agentStore.ts            # 에이전트 Zustand 스토어
 │
 ├── services/
-│   └── api.ts                   # API 클라이언트 (portfolioApi, tradeApi, agentApi, settingsApi, walletApi)
+│   └── api.ts                   # API 클라이언트 (+ ordersApi 주문)
 │
 ├── types/
 │   ├── portfolio.ts             # Portfolio, Position 타입
@@ -136,7 +137,8 @@ useWebSocket → Zustand Store (usePortfolioStore, useAgentStore)
 | 모듈 | 메서드 | 설명 |
 |------|--------|------|
 | `portfolioApi` | `getPortfolio()` | 포트폴리오 조회 |
-| `tradeApi` | `getTrades()` | 거래 내역 |
+| `ordersApi` | `market/limit/orderbook/sellAllFree/getOpen/cancel/...` | REST 주문·미체결·취소 |
+| `tradeApi` | `getTrades()` | DB 거래 내역 |
 | `tradeApi` | `closeAllPositions()` | 전체 청산 |
 | `agentApi` | `getAgents()` | 에이전트 상태 |
 | `agentApi` | `getAgentLogs()` | 로그 조회 |

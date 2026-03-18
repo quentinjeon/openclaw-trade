@@ -5,7 +5,7 @@ POST /api/trades/close-all - 전체 포지션 청산
 """
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
@@ -23,12 +23,16 @@ async def get_trades(
     db: AsyncSession = Depends(get_db),
 ):
     """거래 내역 조회"""
-    query = select(Trade).order_by(desc(Trade.created_at))
-
+    base = select(Trade)
     if symbol:
-        query = query.where(Trade.symbol == symbol)
+        base = base.where(Trade.symbol == symbol)
 
-    query = query.limit(limit).offset(offset)
+    count_stmt = select(func.count(Trade.id))
+    if symbol:
+        count_stmt = count_stmt.where(Trade.symbol == symbol)
+    total = int((await db.execute(count_stmt)).scalar_one() or 0)
+
+    query = base.order_by(desc(Trade.created_at)).limit(limit).offset(offset)
     result = await db.execute(query)
     trades = result.scalars().all()
 
@@ -45,16 +49,19 @@ async def get_trades(
             fee=t.fee or 0.0,
             status=t.status,
             is_paper=t.is_paper,
+            agent_id=t.agent_id,
             strategy=t.strategy,
             stop_loss=t.stop_loss,
             take_profit=t.take_profit,
+            close_price=t.close_price,
             pnl=t.pnl,
             created_at=t.created_at,
+            updated_at=t.updated_at,
         )
         for t in trades
     ]
 
-    return TradeListResponse(trades=trade_responses, total=len(trade_responses))
+    return TradeListResponse(trades=trade_responses, total=total)
 
 
 @router.post("/close-all")
